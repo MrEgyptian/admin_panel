@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="card">
+	<div class="page-head">
+		<div>
+			<h2 style="margin: 0;">Executables</h2>
+			<p class="muted" style="margin: 0.35rem 0 0 0;">Manage availability, expiry, and distribution links.</p>
+		</div>
+		{% if can_manage_executables %}
+		<a class="button-link" href="{{ url_for('dashboard.new_executable') }}">Add executable</a>
+		{% endif %}
+	</div>
+
+	{% if executables %}
+	<table>
+		<thead>
+			<tr>
+				<th>Name</th>
+				<th>Type</th>
+				<th>Status</th>
+				<th>Available</th>
+				<th>Expires</th>
+				<th>Server URL</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+		{% for exe in executables %}
+			<tr>
+				<td>{{ exe.name }}</td>
+				<td>{{ exe.type|upper }}</td>
+				<td>
+					{% set badge_class = 'badge-active' %}
+					{% if exe.status_label == 'Expired' %}
+						{% set badge_class = 'badge-expired' %}
+					{% elif exe.status_label == 'Revoked' %}
+						{% set badge_class = 'badge-revoked' %}
+					{% elif exe.status_label == 'Scheduled' %}
+						{% set badge_class = 'badge-scheduled' %}
+					{% endif %}
+					<span class="badge {{ badge_class }}">{{ exe.status_label }}</span>
+					{% if exe.days_remaining is not none %}
+						<div class="muted">{{ exe.days_remaining }} days remaining</div>
+					{% endif %}
+				</td>
+				<td>{{ exe.available_from or 'Immediate' }}</td>
+				<td>{{ exe.expiry_date or 'No expiry' }}</td>
+				<td>{{ exe.server_url or 'Not set' }}</td>
+				<td class="actions">
+					<a class="button-link" style="padding: 0.4rem 0.75rem; font-size: 0.85rem;" href="{{ url_for('dashboard.download_executable', exe_id=exe.id) }}">Download</a>
+					{% if can_manage_executables %}
+					<form method="post" action="{{ url_for('dashboard.toggle_executable', exe_id=exe.id) }}" style="display: inline;">
+						<button type="submit" class="primary" style="margin-left: 0.35rem;">{{ 'Unrevoke' if exe.revoked else 'Revoke' }}</button>
+					</form>
+					<form method="post" action="{{ url_for('dashboard.delete_executable', exe_id=exe.id) }}" style="display: inline;" onsubmit="return confirm('Delete this executable?');">
+						<button type="submit" class="secondary" style="margin-left: 0.35rem;">Delete</button>
+					</form>
+					{% endif %}
+				</td>
+			</tr>
+		{% endfor %}
+		</tbody>
+	</table>
+	{% else %}
+		<div class="table-empty">
+			<p>No executables found. Use the button above to create one.</p>
+		</div>
+	{% endif %}
+</div>
+{% endblock %}

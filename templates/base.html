@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>{% block title %}Admin Panel{% endblock %}</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.min.css') }}">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <h1>Admin Panel</h1>
+        {% if session.get('user') %}
+        <div>
+            Signed in as <strong>{{ session.get('user') }}</strong>
+            &nbsp;|&nbsp;
+            <a href="{{ url_for('auth.logout') }}">Log out</a>
+        </div>
+        <nav style="margin-top: 0.75rem; display: flex; gap: 1rem;">
+            <a href="{{ url_for('dashboard.dashboard') }}">Dashboard</a>
+            {% set perms = session.get('permissions', []) %}
+            {% if 'manage_settings' in perms %}
+            <a href="{{ url_for('settings.settings_index') }}">Settings</a>
+            {% endif %}
+            {% if 'manage_admins' in perms %}
+            <a href="{{ url_for('settings.manage_admins') }}">Admin accounts</a>
+            {% endif %}
+        </nav>
+        {% endif %}
+    </header>
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <ul class="flash-messages">
+                {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        {% endwith %}
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

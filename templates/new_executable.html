@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Add Executable{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 640px; margin: 0 auto;">
+    <h2 style="margin-top: 0;">Generate New Executable</h2>
+    <p class="muted" style="margin: 0 0 1.25rem 0;">Define release windows, expiry policies, and distribution endpoint metadata.</p>
+    <form method="post">
+        <label for="name">Executable name</label>
+        <input id="name" name="name" required maxlength="120">
+
+        <label for="exe_type">Executable type</label>
+        <select id="exe_type" name="exe_type" required>
+            {% for option in exe_types %}
+                <option value="{{ option }}">{{ option.title() }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="available_from">Available from (YYYY-MM-DD, optional)</label>
+        <input id="available_from" name="available_from" placeholder="2025-01-01" pattern="\d{4}-\d{2}-\d{2}">
+
+        <label for="expiry_date">Expiry date (YYYY-MM-DD, optional)</label>
+        <input id="expiry_date" name="expiry_date" placeholder="2025-12-31" pattern="\d{4}-\d{2}-\d{2}">
+
+        <label for="server_url">Server URL (optional)</label>
+        <input id="server_url" name="server_url" placeholder="https://example.com/api" maxlength="255">
+
+        <div style="display: flex; gap: 1rem; margin-top: 1.75rem;">
+            <button type="submit" style="flex: 1;">Generate</button>
+            <a class="button-link" href="{{ url_for('dashboard.dashboard') }}" style="flex: 1; justify-content: center;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
