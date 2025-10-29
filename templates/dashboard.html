@@ -9,7 +9,9 @@
 				<p class="muted">Manage availability, expiry, and distribution links.</p>
 			</div>
 			{% if can_manage_executables %}
-			<a class="btn btn-primary" href="{{ url_for('dashboard.new_executable') }}">Add executable</a>
+			<a class="btn btn-primary" href="{{ url_for('dashboard.new_executable') }}">
+				<i class="fa-solid fa-plus me-1"></i>Add executable
+			</a>
 			{% endif %}
 		</div>
 
@@ -50,13 +52,19 @@
 						<td>{{ exe.expiry_date or 'No expiry' }}</td>
 						<td>{{ exe.server_url or 'Not set' }}</td>
 						<td class="text-end actions">
-							<a class="btn btn-outline-primary btn-sm" href="{{ url_for('dashboard.download_executable', exe_id=exe.id) }}">Download</a>
+							<a class="btn btn-outline-primary btn-sm" href="{{ url_for('dashboard.download_executable', exe_id=exe.id) }}">
+								<i class="fa-solid fa-download me-1"></i>Download
+							</a>
 							{% if can_manage_executables %}
 							<form class="d-inline" method="post" action="{{ url_for('dashboard.toggle_executable', exe_id=exe.id) }}">
-								<button type="submit" class="btn btn-sm btn-warning ms-1">{{ 'Unrevoke' if exe.revoked else 'Revoke' }}</button>
+								<button type="submit" class="btn btn-sm btn-warning ms-1">
+									<i class="fa-solid fa-ban me-1"></i>{{ 'Unrevoke' if exe.revoked else 'Revoke' }}
+								</button>
 							</form>
 							<form class="d-inline" method="post" action="{{ url_for('dashboard.delete_executable', exe_id=exe.id) }}" onsubmit="return confirm('Delete this executable?');">
-								<button type="submit" class="btn btn-sm btn-outline-danger ms-1">Delete</button>
+								<button type="submit" class="btn btn-sm btn-outline-danger ms-1">
+									<i class="fa-solid fa-trash-can me-1"></i>Delete
+								</button>
 							</form>
 							{% endif %}
 						</td>
