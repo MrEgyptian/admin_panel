@@ -55,7 +55,13 @@
 							<a class="btn btn-outline-primary btn-sm" href="{{ url_for('dashboard.download_executable', exe_id=exe.id) }}">
 								<i class="fa-solid fa-download me-1"></i>Download
 							</a>
+							<button type="button" class="btn btn-outline-secondary btn-sm ms-1" data-copy="{{ url_for('dashboard.download_executable', exe_id=exe.id, _external=True) }}">
+								<i class="fa-solid fa-link me-1"></i>Copy link
+							</button>
 							{% if can_manage_executables %}
+							<a class="btn btn-outline-secondary btn-sm ms-1" href="{{ url_for('dashboard.edit_executable', exe_id=exe.id) }}">
+								<i class="fa-solid fa-pen-to-square me-1"></i>Edit
+							</a>
 							<form class="d-inline" method="post" action="{{ url_for('dashboard.toggle_executable', exe_id=exe.id) }}">
 								<button type="submit" class="btn btn-sm btn-warning ms-1">
 									<i class="fa-solid fa-ban me-1"></i>{{ 'Unrevoke' if exe.revoked else 'Revoke' }}
@@ -80,4 +86,51 @@
 		{% endif %}
 	</div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+	const copyButtons = document.querySelectorAll('[data-copy]');
+	if (!copyButtons.length) {
+		return;
+	}
+
+	copyButtons.forEach((button) => {
+		if (!button.dataset.defaultHtml) {
+			button.dataset.defaultHtml = button.innerHTML;
+		}
+		button.addEventListener('click', async () => {
+			const link = button.getAttribute('data-copy');
+			if (!link) {
+				return;
+			}
+
+			let copied = false;
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				try {
+					await navigator.clipboard.writeText(link);
+					copied = true;
+				} catch (error) {
+					copied = false;
+				}
+			}
+
+			if (!copied) {
+				window.prompt('Copy the executable download link:', link);
+			}
+
+			button.innerHTML = copied
+				? '<i class="fa-solid fa-check me-1"></i>Copied'
+				: '<i class="fa-solid fa-link me-1"></i>Link ready';
+			button.disabled = true;
+			setTimeout(() => {
+				button.innerHTML = button.dataset.defaultHtml;
+				button.disabled = false;
+			}, 2000);
+		});
+	});
+});
+</script>
 {% endblock %}

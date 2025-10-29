@@ -131,6 +131,89 @@ def new_executable():
     return render_template("new_executable.html", exe_types=exe_types)
 
 
+@dashboard_bp.route("/executables/<exe_id>/edit", methods=["GET", "POST"])
+@login_required
+@require_permission("manage_executables")
+def edit_executable(exe_id: str):
+    exe_types: List[str] = current_app.config["EXE_TYPES"]
+    executables = _load_executables()
+
+    for index, item in enumerate(executables):
+        if item.get("id") == exe_id:
+            executable = item
+            break
+    else:
+        abort(404)
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        exe_type = request.form.get("exe_type", "").strip()
+        available_from_raw = request.form.get("available_from", "").strip()
+        expiry_date_raw = request.form.get("expiry_date", "").strip()
+        server_url = request.form.get("server_url", "").strip()
+
+        form_values: Dict[str, Any] = {
+            "id": exe_id,
+            "name": name,
+            "type": exe_type,
+            "available_from": available_from_raw,
+            "expiry_date": expiry_date_raw,
+            "server_url": server_url,
+            "revoked": executable.get("revoked", False),
+        }
+
+        if not name:
+            flash("Executable name is required.", "error")
+            return render_template("edit_executable.html", exe=form_values, exe_types=exe_types)
+
+        if exe_type not in exe_types:
+            flash("Invalid executable type selected.", "error")
+            return render_template("edit_executable.html", exe=form_values, exe_types=exe_types)
+
+        available_from = parse_form_date(available_from_raw)
+        if available_from_raw and not available_from:
+            flash("Available from date must follow YYYY-MM-DD.", "error")
+            return render_template("edit_executable.html", exe=form_values, exe_types=exe_types)
+
+        expiry_date = parse_form_date(expiry_date_raw)
+        if expiry_date_raw and not expiry_date:
+            flash("Expiry date must follow YYYY-MM-DD.", "error")
+            return render_template("edit_executable.html", exe=form_values, exe_types=exe_types)
+
+        if server_url and not server_url.startswith(("http://", "https://")):
+            flash("Server URL must start with http:// or https://.", "error")
+            return render_template("edit_executable.html", exe=form_values, exe_types=exe_types)
+
+        available_from_date = parse_iso_date(available_from)
+        expiry_date_date = parse_iso_date(expiry_date)
+        if available_from_date and expiry_date_date and available_from_date > expiry_date_date:
+            flash("Available from date must be on or before the expiry date.", "error")
+            return render_template("edit_executable.html", exe=form_values, exe_types=exe_types)
+
+        executable["name"] = name
+        executable["type"] = exe_type
+        executable["available_from"] = available_from
+        executable["expiry_date"] = expiry_date
+        executable["server_url"] = server_url or None
+
+        status_snapshot = compute_status(executable)
+        executable["file_name"] = generate_stub_executable(
+            _files_dir(),
+            exe_id,
+            name,
+            exe_type,
+            status_snapshot,
+        )
+
+        executables[index] = executable
+        _save_executables(executables)
+
+        flash(f"Executable '{name}' updated.", "success")
+        return redirect(url_for("dashboard.dashboard"))
+
+    return render_template("edit_executable.html", exe=executable, exe_types=exe_types)
+
+
 @dashboard_bp.route("/executables/<exe_id>/toggle", methods=["POST"])
 @login_required
 @require_permission("manage_executables")
