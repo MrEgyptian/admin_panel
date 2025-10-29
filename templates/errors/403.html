@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Access Denied{% endblock %}
 {% block content %}
-<div class="card" style="max-width: 560px; margin: 0 auto; text-align: center;">
-    <h2>Access Denied</h2>
-    <p class="muted">You don't have permission to view this resource. If you believe this is an error, please sign in with the correct account or contact an administrator.</p>
-    <a class="button-link" href="{{ url_for('auth.login') }}" style="margin-top: 1.25rem; justify-content: center;">Return to login</a>
+<div class="card app-card shadow-sm" style="max-width: 560px; margin: 0 auto; text-align: center;">
+    <div class="card-body">
+        <h2 class="mb-3">Access Denied</h2>
+        <p class="muted">You don't have permission to view this resource. If you believe this is an error, please sign in with the correct account or contact an administrator.</p>
+        <a class="btn btn-primary mt-3" href="{{ url_for('auth.login') }}">Return to login</a>
+    </div>
 </div>
 {% endblock %}

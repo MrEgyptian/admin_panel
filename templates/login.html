@@ -1,19 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Sign In{% endblock %}
 {% block content %}
-<div class="auth-card">
-	<h2>Admin Login</h2>
-	<form method="post" novalidate id="login-form">
-		<label for="username">Username</label>
-		<input id="username" name="username" required autofocus>
-
-		<label for="password">Password</label>
-		<input id="password" name="password" type="password" required>
-
-		<input type="hidden" name="next" value="{{ next_url }}">
-
-		<button type="submit">Sign In</button>
-	</form>
+<div class="card app-card auth-card shadow-sm">
+	<div class="card-body">
+		<h2 class="mb-3">Admin Login</h2>
+		<form method="post" novalidate id="login-form" class="needs-validation" autocomplete="off">
+			<div class="mb-3">
+				<label for="username" class="form-label">Username</label>
+				<input id="username" name="username" class="form-control" required autofocus>
+			</div>
+			<div class="mb-3">
+				<label for="password" class="form-label">Password</label>
+				<input id="password" name="password" type="password" class="form-control" required>
+			</div>
+			<input type="hidden" name="next" value="{{ next_url }}">
+			<button type="submit" class="btn btn-primary w-100">Sign In</button>
+		</form>
+	</div>
 </div>
 {% endblock %}
 {% block scripts %}

@@ -1,32 +1,42 @@
 {% extends "base.html" %}
 {% block title %}Settings{% endblock %}
 {% block content %}
-<div class="card" style="max-width: 680px; margin: 0 auto;">
-    <h2 style="margin-top: 0;">Application Settings</h2>
-    <p class="muted" style="margin-bottom: 1.5rem;">Update runtime configuration. Changes persist to <code>config.ini</code> and apply immediately.</p>
-    <form method="post">
-        <label for="secret_key">Secret key</label>
-        <input id="secret_key" name="secret_key" required value="{{ current.secret_key }}" autocomplete="off">
+<div class="card app-card shadow-sm" style="max-width: 720px; margin: 0 auto;">
+    <div class="card-body">
+        <h2 class="mb-2">Application Settings</h2>
+        <p class="muted mb-4">Update runtime configuration. Changes persist to <code>config.ini</code> and apply immediately.</p>
+        <form method="post" class="row g-3">
+            <div class="col-12">
+                <label for="secret_key" class="form-label">Secret key</label>
+                <input id="secret_key" name="secret_key" class="form-control" required value="{{ current.secret_key }}" autocomplete="off">
+            </div>
 
-        <label for="session_cookie_http_only" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem;">
-            <input type="checkbox" id="session_cookie_http_only" name="session_cookie_http_only" {% if current.session_cookie_http_only %}checked{% endif %}>
-            <span>Session cookie HTTP only</span>
-        </label>
+            <div class="col-md-6">
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" role="switch" id="session_cookie_http_only" name="session_cookie_http_only" {% if current.session_cookie_http_only %}checked{% endif %}>
+                    <label class="form-check-label" for="session_cookie_http_only">Session cookie HTTP only</label>
+                </div>
+            </div>
 
-        <label for="session_cookie_samesite">Session cookie SameSite</label>
-        <select id="session_cookie_samesite" name="session_cookie_samesite">
-            {% for option in ["Lax", "Strict", "None"] %}
-                <option value="{{ option }}" {% if option == current.session_cookie_samesite %}selected{% endif %}>{{ option }}</option>
-            {% endfor %}
-        </select>
+            <div class="col-md-6">
+                <label for="session_cookie_samesite" class="form-label">Session cookie SameSite</label>
+                <select id="session_cookie_samesite" name="session_cookie_samesite" class="form-select">
+                    {% for option in ["Lax", "Strict", "None"] %}
+                        <option value="{{ option }}" {% if option == current.session_cookie_samesite %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
 
-        <label for="exe_types">Executable types (comma separated)</label>
-        <input id="exe_types" name="exe_types" value="{{ current.exe_types }}" placeholder="standard, elevated, portable">
+            <div class="col-12">
+                <label for="exe_types" class="form-label">Executable types (comma separated)</label>
+                <input id="exe_types" name="exe_types" class="form-control" value="{{ current.exe_types }}" placeholder="standard, elevated, portable">
+            </div>
 
-        <div style="margin-top: 1.75rem; display: flex; gap: 1rem;">
-            <button type="submit" class="primary" style="flex: 1;">Save settings</button>
-            <a class="button-link" href="{{ url_for('dashboard.dashboard') }}" style="flex: 1; justify-content: center;">Back to dashboard</a>
-        </div>
-    </form>
+            <div class="col-12 d-flex flex-column flex-md-row gap-3 mt-2">
+                <button type="submit" class="btn btn-primary flex-fill">Save settings</button>
+                <a class="btn btn-outline-secondary flex-fill" href="{{ url_for('dashboard.dashboard') }}">Back to dashboard</a>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

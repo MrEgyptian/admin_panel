@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Server Error{% endblock %}
 {% block content %}
-<div class="card" style="max-width: 560px; margin: 0 auto; text-align: center;">
-    <h2>Something went wrong</h2>
-    <p class="muted">An unexpected error occurred while processing your request. The incident has been logged. Please try again or contact support if the issue persists.</p>
-    <a class="button-link" href="{{ url_for('dashboard.dashboard') }}" style="margin-top: 1.25rem; justify-content: center;">Back to dashboard</a>
+<div class="card app-card shadow-sm" style="max-width: 560px; margin: 0 auto; text-align: center;">
+    <div class="card-body">
+        <h2 class="mb-3">Something went wrong</h2>
+        <p class="muted">An unexpected error occurred while processing your request. The incident has been logged. Please try again or contact support if the issue persists.</p>
+        <a class="btn btn-primary mt-3" href="{{ url_for('dashboard.dashboard') }}">Back to dashboard</a>
+    </div>
 </div>
 {% endblock %}

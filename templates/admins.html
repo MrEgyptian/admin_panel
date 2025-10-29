@@ -1,136 +1,162 @@
 {% extends "base.html" %}
 {% block title %}Admin Accounts{% endblock %}
 {% block content %}
-<div class="card">
-    <div class="page-head">
-        <div>
-            <h2 style="margin: 0;">Administrators</h2>
-            <p class="muted" style="margin: 0.35rem 0 0 0;">Assign roles and fine-grained permissions to control access.</p>
+<div class="card app-card shadow-sm">
+    <div class="card-body">
+        <div class="app-page-head">
+            <div>
+                <h2 class="mb-1">Administrators</h2>
+                <p class="muted">Assign roles and fine-grained permissions to control access.</p>
+            </div>
+            <a class="btn btn-outline-primary" href="{{ url_for('settings.settings_index') }}">Settings</a>
         </div>
-        <a class="button-link" href="{{ url_for('settings.settings_index') }}">Settings</a>
-    </div>
 
-    {% if admins %}
-    <table>
-        <thead>
-            <tr>
-                <th>Username</th>
-                <th>Role</th>
-                <th>Permissions</th>
-                <th>Created</th>
-                <th style="width: 140px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for admin in admins %}
-            <tr>
-                <td>{{ admin.username }}</td>
-                <td>{{ admin.role_label }}</td>
-                <td>
-                    {% if admin.permissions_display %}
-                        {{ admin.permissions_display | join(', ') }}
-                    {% else %}
-                        <span class="muted">None</span>
-                    {% endif %}
-                </td>
-                <td>{{ admin.created_at or 'Unknown' }}</td>
-                <td>
-                    <form method="post" action="{{ url_for('settings.manage_admins') }}" style="display: inline;" onsubmit="return confirm('Delete admin {{ admin.username }}?');">
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="username" value="{{ admin.username }}">
-                        <button type="submit" class="secondary">Delete</button>
-                    </form>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="table-empty">
-        <p>No admin accounts found.</p>
+        {% if admins %}
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Username</th>
+                        <th scope="col">Role</th>
+                        <th scope="col">Permissions</th>
+                        <th scope="col">Created</th>
+                        <th scope="col" class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for admin in admins %}
+                    <tr>
+                        <td>{{ admin.username }}</td>
+                        <td>{{ admin.role_label }}</td>
+                        <td>
+                            {% if admin.permissions_display %}
+                                {{ admin.permissions_display | join(', ') }}
+                            {% else %}
+                                <span class="muted">None</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ admin.created_at or 'Unknown' }}</td>
+                        <td class="text-end">
+                            <form method="post" action="{{ url_for('settings.manage_admins') }}" class="d-inline" onsubmit="return confirm('Delete admin {{ admin.username }}?');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="username" value="{{ admin.username }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="table-empty">
+            <p class="mb-0">No admin accounts found.</p>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
-<div class="card" style="margin-top: 2rem; max-width: 560px;">
-    <h3 style="margin-top: 0;">Add Administrator</h3>
-    <p class="muted">Passwords are stored hashed; distribute credentials securely after creation.</p>
-    <form method="post" action="{{ url_for('settings.manage_admins') }}">
-        <input type="hidden" name="action" value="add">
-        <label for="username">Username</label>
-        <input id="username" name="username" required maxlength="120">
+<div class="row g-4 mt-2">
+    <div class="col-12 col-lg-6">
+        <div class="card app-card shadow-sm h-100">
+            <div class="card-body">
+                <h3 class="mb-2">Add Administrator</h3>
+                <p class="muted">Passwords are stored hashed; distribute credentials securely after creation.</p>
+                <form method="post" action="{{ url_for('settings.manage_admins') }}" class="row g-3">
+                    <input type="hidden" name="action" value="add">
+                    <div class="col-12">
+                        <label for="username" class="form-label">Username</label>
+                        <input id="username" name="username" class="form-control" required maxlength="120">
+                    </div>
 
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" required>
+                    <div class="col-12">
+                        <label for="password" class="form-label">Password</label>
+                        <input id="password" name="password" type="password" class="form-control" required>
+                    </div>
 
-        <label for="confirm">Confirm password</label>
-        <input id="confirm" name="confirm" type="password" required>
+                    <div class="col-12">
+                        <label for="confirm" class="form-label">Confirm password</label>
+                        <input id="confirm" name="confirm" type="password" class="form-control" required>
+                    </div>
 
-        <label for="role">Role</label>
-        <select id="role" name="role" data-role-select="add">
-            {% for role in roles %}
-                <option value="{{ role.name }}" data-description="{{ role.description|e }}">{{ role.label }}</option>
-            {% endfor %}
-        </select>
-        <p class="muted" data-role-description="add" style="margin-top: 0.35rem;"></p>
+                    <div class="col-12">
+                        <label for="role" class="form-label">Role</label>
+                        <select id="role" name="role" class="form-select" data-role-select="add">
+                            {% for role in roles %}
+                                <option value="{{ role.name }}" data-description="{{ role.description|e }}">{{ role.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="muted mt-2" data-role-description="add"></p>
+                    </div>
 
-        <div class="custom-permissions" data-custom-for="add" style="display: none; margin-top: 1rem;">
-            <p class="muted" style="margin-top: 0;">Select the permissions granted to this custom role.</p>
-            <div style="display: grid; gap: 0.5rem;">
-                {% for perm in permissions %}
-                <label style="display: flex; gap: 0.5rem; align-items: center;">
-                    <input type="checkbox" name="custom_permissions" value="{{ perm.name }}">
-                    <span>{{ perm.label }}</span>
-                </label>
-                {% endfor %}
+                    <div class="col-12 mt-2" data-custom-for="add" style="display: none;">
+                        <p class="muted mb-2">Select the permissions granted to this custom role.</p>
+                        <div class="d-grid gap-2">
+                            {% for perm in permissions %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="custom_permissions" value="{{ perm.name }}" id="add-perm-{{ perm.name }}">
+                                <label class="form-check-label" for="add-perm-{{ perm.name }}">{{ perm.label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="col-12 d-flex flex-column gap-2">
+                        <button type="submit" class="btn btn-primary">Add admin</button>
+                        <a class="btn btn-outline-secondary" href="{{ url_for('dashboard.dashboard') }}">Back</a>
+                    </div>
+                </form>
             </div>
         </div>
+    </div>
 
-        <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-            <button type="submit" class="primary" style="flex: 1;">Add admin</button>
-            <a class="button-link" href="{{ url_for('dashboard.dashboard') }}" style="flex: 1; justify-content: center;">Back</a>
-        </div>
-    </form>
-</div>
+    <div class="col-12 col-lg-6">
+        <div class="card app-card shadow-sm h-100">
+            <div class="card-body">
+                <h3 class="mb-2">Update Administrator</h3>
+                <p class="muted">Change the role or custom permissions assigned to an existing administrator.</p>
+                <form method="post" action="{{ url_for('settings.manage_admins') }}" class="row g-3">
+                    <input type="hidden" name="action" value="update">
 
-<div class="card" style="margin-top: 2rem; max-width: 560px;">
-    <h3 style="margin-top: 0;">Update Administrator</h3>
-    <p class="muted">Change the role or custom permissions assigned to an existing administrator.</p>
-    <form method="post" action="{{ url_for('settings.manage_admins') }}">
-        <input type="hidden" name="action" value="update">
+                    <div class="col-12">
+                        <label for="edit_username" class="form-label">Administrator</label>
+                        <select id="edit_username" name="username" class="form-select" required>
+                            <option value="" disabled selected>Select an admin account</option>
+                            {% for admin in admins %}
+                                <option value="{{ admin.username }}">{{ admin.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        <label for="edit_username">Administrator</label>
-        <select id="edit_username" name="username" required>
-            <option value="" disabled selected>Select an admin account</option>
-            {% for admin in admins %}
-                <option value="{{ admin.username }}">{{ admin.username }}</option>
-            {% endfor %}
-        </select>
+                    <div class="col-12">
+                        <label for="edit_role" class="form-label">Role</label>
+                        <select id="edit_role" name="role" class="form-select" data-role-select="edit">
+                            {% for role in roles %}
+                                <option value="{{ role.name }}" data-description="{{ role.description|e }}">{{ role.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="muted mt-2" data-role-description="edit"></p>
+                    </div>
 
-        <label for="edit_role" style="margin-top: 1rem;">Role</label>
-        <select id="edit_role" name="role" data-role-select="edit">
-            {% for role in roles %}
-                <option value="{{ role.name }}" data-description="{{ role.description|e }}">{{ role.label }}</option>
-            {% endfor %}
-        </select>
-        <p class="muted" data-role-description="edit" style="margin-top: 0.35rem;"></p>
+                    <div class="col-12 mt-2" data-custom-for="edit" style="display: none;">
+                        <p class="muted mb-2">Select the permissions this admin should retain.</p>
+                        <div class="d-grid gap-2">
+                            {% for perm in permissions %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="custom_permissions" value="{{ perm.name }}" id="edit-perm-{{ perm.name }}">
+                                <label class="form-check-label" for="edit-perm-{{ perm.name }}">{{ perm.label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
 
-        <div class="custom-permissions" data-custom-for="edit" style="display: none; margin-top: 1rem;">
-            <p class="muted" style="margin-top: 0;">Select the permissions this admin should retain.</p>
-            <div style="display: grid; gap: 0.5rem;">
-                {% for perm in permissions %}
-                <label style="display: flex; gap: 0.5rem; align-items: center;">
-                    <input type="checkbox" name="custom_permissions" value="{{ perm.name }}">
-                    <span>{{ perm.label }}</span>
-                </label>
-                {% endfor %}
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary w-100">Update admin</button>
+                    </div>
+                </form>
             </div>
         </div>
-
-        <div style="margin-top: 1.5rem;">
-            <button type="submit" class="primary" style="width: 100%;">Update admin</button>
-        </div>
-    </form>
+    </div>
 </div>
 {% endblock %}
 
