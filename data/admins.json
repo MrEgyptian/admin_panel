@@ -5,6 +5,18 @@
       "password_hash": "scrypt:32768:8:1$FCPW026Z94gaEByz$59f76b32d9410791cff65f3dae88b5f95a101f5b94483e3eaf49ae068063ad7bdca5c57aef9f84b078a6fcb2a8a0546cd08565b64e79537899634ee2f6b0c23a",
       "created_at": "2025-10-29T09:32:30.249287",
       "role": "god"
+    },
+    {
+      "username": "khara",
+      "password_hash": "scrypt:32768:8:1$P8t09MssDhdz7OGw$d95ec0057c4e58ae4e16d8e4fe97f3ab402d955818a8438ee080f8fe863af34834c360e7f0c7089c3606987ef39977a01b3610762afa3568eb1eb401d1eefa5e",
+      "created_at": "2025-10-30T03:23:27.492073",
+      "role": "normal_admin"
+    },
+    {
+      "username": "admin1",
+      "password_hash": "scrypt:32768:8:1$O1wHRkvLQFJGwYrT$fd4d0ce0b46c62986bacd5996d95900284e5b6a432ac164bc6c39870ed322b3ce571999130b5da684744e07035724d63de754643c3d29645011809697af02ad0",
+      "created_at": "2025-10-30T03:24:17.018205",
+      "role": "super_admin"
     }
   ]
 }

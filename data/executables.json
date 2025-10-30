@@ -6,8 +6,19 @@
     "available_from": null,
     "expiry_date": null,
     "server_url": null,
-    "revoked": true,
+    "revoked": false,
     "created_at": "2025-10-29T15:44:39.121217",
     "file_name": "8bb1d723ffe3464da92b4f3847e6c15c.exe"
+  },
+  {
+    "id": "20aa23febbb64f28ba38f1662bfe23e0",
+    "name": "sdadsadsa",
+    "type": "standard",
+    "available_from": null,
+    "expiry_date": null,
+    "server_url": "https://google.com",
+    "revoked": false,
+    "created_at": "2025-10-30T04:04:14.660114",
+    "file_name": "20aa23febbb64f28ba38f1662bfe23e0.exe"
   }
 ]

@@ -16,7 +16,7 @@ from flask import (
     url_for,
 )
 
-from routes.decorators import login_required, require_permission, session_is_authenticated
+from routes.decorators import has_permission, login_required, require_permission, session_is_authenticated
 from utils.exe import compute_status, generate_stub_executable, load_executables, save_executables
 from utils.logs import append_log_entry
 from utils.time import parse_form_date, parse_iso_date
@@ -350,9 +350,18 @@ def delete_executable(exe_id: str):
 
 
 @dashboard_bp.route("/executables/<exe_id>/download")
-@login_required
-@require_permission("view_dashboard")
 def download_executable(exe_id: str):
+    downloads_public = current_app.config.get("EXECUTABLE_DOWNLOADS_PUBLIC", False)
+
+    if not downloads_public:
+        if not session_is_authenticated():
+            next_target = request.path
+            return redirect(url_for("auth.login", next=next_target))
+        if not has_permission("view_dashboard"):
+            abort(403)
+    else:
+        session_is_authenticated()
+
     executable = _find_executable(exe_id)
     if not executable:
         abort(404)

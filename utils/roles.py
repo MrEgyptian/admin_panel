@@ -27,7 +27,7 @@ AVAILABLE_PERMISSIONS: List[Dict[str, str]] = [
 
 ROLE_DEFINITIONS: Dict[str, Dict[str, object]] = {
     "god": {
-        "label": "God Admin",
+        "label": "God",
         "description": "Full system control, cannot be restricted.",
         "permissions": ["*"],
     },

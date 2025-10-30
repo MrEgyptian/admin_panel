@@ -30,13 +30,23 @@
                         <td>{{ admin.role_label }}</td>
                         <td>
                             {% if admin.permissions_display %}
-                                {{ admin.permissions_display | join(', ') }}
+                                <ul class="list-unstyled mb-0">
+                                    {% for perm in admin.permissions_display %}
+                                    <li class="d-flex align-items-center">
+                                        <i class="fa-solid fa-circle-check text-success me-2 small"></i>
+                                        <span>{{ perm }}</span>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
                             {% else %}
                                 <span class="muted">None</span>
                             {% endif %}
                         </td>
                         <td>{{ admin.created_at or 'Unknown' }}</td>
                         <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary me-1" href="#edit-admin" data-edit-admin="{{ admin.username }}">
+                                <i class="fa-solid fa-pen-to-square me-1"></i>Edit
+                            </a>
                             {% if can_view_logs %}
                             <a class="btn btn-sm btn-outline-secondary me-1" href="{{ url_for('logs.logs_for_user', username=admin.username) }}">
                                 <i class="fa-solid fa-clipboard-list me-1"></i>Logs
@@ -116,11 +126,11 @@
     </div>
 
     <div class="col-12 col-lg-6">
-        <div class="card app-card shadow-sm h-100">
+        <div class="card app-card shadow-sm h-100" id="edit-admin">
             <div class="card-body">
                 <h3 class="mb-2">Update Administrator</h3>
                 <p class="muted">Change the role or custom permissions assigned to an existing administrator.</p>
-                <form method="post" action="{{ url_for('settings.manage_admins') }}" class="row g-3">
+                <form method="post" action="{{ url_for('settings.manage_admins') }}" class="row g-3" id="edit-admin-form">
                     <input type="hidden" name="action" value="update">
 
                     <div class="col-12">
@@ -238,6 +248,30 @@
             applyRoleDescription(editRole);
             toggleCustomPermissions(editRole, adminLookup[editUsername.value].resolved_permissions || []);
         }
+
+        const editButtons = Array.from(document.querySelectorAll('[data-edit-admin]'));
+        const editCard = document.getElementById('edit-admin');
+        const editForm = document.getElementById('edit-admin-form');
+        editButtons.forEach(function (button) {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                const targetUser = button.getAttribute('data-edit-admin');
+                if (!targetUser) {
+                    return;
+                }
+                editUsername.value = targetUser;
+                editUsername.dispatchEvent(new Event('change', { bubbles: true }));
+                if (editForm && editForm.scrollIntoView) {
+                    editForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                if (editCard) {
+                    editCard.classList.add('border', 'border-primary');
+                    setTimeout(function () {
+                        editCard.classList.remove('border', 'border-primary');
+                    }, 2000);
+                }
+            });
+        });
     }
 })();
 </script>

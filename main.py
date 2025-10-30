@@ -48,6 +48,12 @@ exe_types = [item.strip() for item in exe_types_raw.split(",") if item.strip()] 
     "portable",
 ]
 
+executables_public_downloads = config.getboolean(
+    "executables",
+    "public_downloads",
+    fallback=False,
+)
+
 
 app = Flask(__name__)
 app.config.update(
@@ -62,6 +68,7 @@ app.config.update(
     DEFAULT_ADMIN_USERNAME=default_admin_username,
     DEFAULT_ADMIN_PASSWORD=default_admin_password,
     EXE_TYPES=exe_types,
+    EXECUTABLE_DOWNLOADS_PUBLIC=executables_public_downloads,
 )
 
 

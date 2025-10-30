@@ -63,3 +63,53 @@ def filter_logs_by_username(entries: Iterable[LogEntry], username: str) -> List[
 
 def filter_logs_by_exe(entries: Iterable[LogEntry], exe_id: str) -> List[LogEntry]:
     return [entry for entry in entries if entry.get("exe_id") == exe_id]
+
+
+def delete_log_entry(
+    log_file: Path,
+    entry_id: str,
+    logger: Optional[logging.Logger] = None,
+) -> bool:
+    entries = load_logs(log_file, logger=logger)
+    filtered = [entry for entry in entries if entry.get("id") != entry_id]
+    if len(filtered) == len(entries):
+        return False
+    save_logs(log_file, filtered)
+    return True
+
+
+def clear_logs_for_executable(
+    log_file: Path,
+    exe_id: str,
+    logger: Optional[logging.Logger] = None,
+) -> int:
+    entries = load_logs(log_file, logger=logger)
+    filtered = [entry for entry in entries if entry.get("exe_id") != exe_id]
+    removed = len(entries) - len(filtered)
+    if removed:
+        save_logs(log_file, filtered)
+    return removed
+
+
+def clear_logs_for_user(
+    log_file: Path,
+    username: Optional[str],
+    logger: Optional[logging.Logger] = None,
+) -> int:
+    entries = load_logs(log_file, logger=logger)
+    filtered = [entry for entry in entries if entry.get("username") != username]
+    removed = len(entries) - len(filtered)
+    if removed:
+        save_logs(log_file, filtered)
+    return removed
+
+
+def clear_all_logs(
+    log_file: Path,
+    logger: Optional[logging.Logger] = None,
+) -> int:
+    entries = load_logs(log_file, logger=logger)
+    removed = len(entries)
+    if removed:
+        save_logs(log_file, [])
+    return removed

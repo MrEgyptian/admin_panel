@@ -1,42 +1,421 @@
 {% extends "base.html" %}
 {% block title %}Settings{% endblock %}
 {% block content %}
-<div class="card app-card shadow-sm" style="max-width: 720px; margin: 0 auto;">
+<div class="card app-card shadow-sm">
     <div class="card-body">
-        <h2 class="mb-2">Application Settings</h2>
-        <p class="muted mb-4">Update runtime configuration. Changes persist to <code>config.ini</code> and apply immediately.</p>
-        <form method="post" class="row g-3">
-            <div class="col-12">
-                <label for="secret_key" class="form-label">Secret key</label>
-                <input id="secret_key" name="secret_key" class="form-control" required value="{{ current.secret_key }}" autocomplete="off">
+        <h2 class="mb-3">Settings</h2>
+        <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link{% if active_tab == 'app' %} active{% endif %}" id="tab-app-btn" data-bs-toggle="tab" data-bs-target="#tab-app" type="button" role="tab" aria-controls="tab-app" aria-selected="{{ 'true' if active_tab == 'app' else 'false' }}">
+                    <i class="fa-solid fa-sliders me-1"></i>Application
+                </button>
+            </li>
+            {% if admin_context %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link{% if active_tab == 'admins' %} active{% endif %}" id="tab-admins-btn" data-bs-toggle="tab" data-bs-target="#tab-admins" type="button" role="tab" aria-controls="tab-admins" aria-selected="{{ 'true' if active_tab == 'admins' else 'false' }}">
+                    <i class="fa-solid fa-users-gear me-1"></i>Administrators
+                </button>
+            </li>
+            {% endif %}
+        </ul>
+
+        <div class="tab-content mt-4">
+            <div class="tab-pane fade{% if active_tab == 'app' %} show active{% endif %}" id="tab-app" role="tabpanel" aria-labelledby="tab-app-btn">
+                <p class="muted mb-4">Update runtime configuration. Changes persist to <code>config.ini</code> and apply immediately.</p>
+                <form method="post" class="row g-3">
+                    <input type="hidden" name="active_tab" value="app">
+                    <div class="col-12">
+                        <label for="secret_key" class="form-label">Secret key</label>
+                        <input id="secret_key" name="secret_key" class="form-control" required value="{{ current.secret_key }}" autocomplete="off">
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" role="switch" id="session_cookie_http_only" name="session_cookie_http_only" {% if current.session_cookie_http_only %}checked{% endif %}>
+                            <label class="form-check-label" for="session_cookie_http_only">Session cookie HTTP only</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="session_cookie_samesite" class="form-label">Session cookie SameSite</label>
+                        <select id="session_cookie_samesite" name="session_cookie_samesite" class="form-select">
+                            {% for option in ["Lax", "Strict", "None"] %}
+                                <option value="{{ option }}" {% if option == current.session_cookie_samesite %}selected{% endif %}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label for="exe_types" class="form-label">Executable types (comma separated)</label>
+                        <input id="exe_types" name="exe_types" class="form-control" value="{{ current.exe_types }}" placeholder="standard, elevated, portable">
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" role="switch" id="executables_public_downloads" name="executables_public_downloads" {% if current.executables_public_downloads %}checked{% endif %}>
+                            <label class="form-check-label" for="executables_public_downloads">Allow public executable downloads</label>
+                            <div class="form-text">When enabled, executable download links are accessible without signing in.</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 d-flex flex-column flex-md-row gap-3 mt-2">
+                        <button type="submit" class="btn btn-primary flex-fill">Save settings</button>
+                        <a class="btn btn-outline-secondary flex-fill" href="{{ url_for('dashboard.dashboard') }}">Back to dashboard</a>
+                    </div>
+                </form>
             </div>
 
-            <div class="col-md-6">
-                <div class="form-check form-switch mt-2">
-                    <input class="form-check-input" type="checkbox" role="switch" id="session_cookie_http_only" name="session_cookie_http_only" {% if current.session_cookie_http_only %}checked{% endif %}>
-                    <label class="form-check-label" for="session_cookie_http_only">Session cookie HTTP only</label>
+            {% if admin_context %}
+            <div class="tab-pane fade{% if active_tab == 'admins' %} show active{% endif %}" id="tab-admins" role="tabpanel" aria-labelledby="tab-admins-btn">
+                <p class="muted mb-4">Manage administrator accounts, roles, and fine-grained permissions.</p>
+                <div class="card app-card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="app-page-head d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                            <div>
+                                <h3 class="mb-1">Administrators</h3>
+                                <p class="muted mb-0">Review existing accounts, adjust roles, and audit activity.</p>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-add-admin">
+                                    <i class="fa-solid fa-user-plus me-1"></i>Add administrator
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-update-admin">
+                                    <i class="fa-solid fa-user-pen me-1"></i>Update administrator
+                                </button>
+                            </div>
+                        </div>
+
+                        {% if admin_context.admins %}
+                        <div class="table-responsive mt-3">
+                            <table class="table table-striped align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Username</th>
+                                        <th scope="col">Role</th>
+                                        <th scope="col">Permissions</th>
+                                        <th scope="col">Created</th>
+                                        <th scope="col" class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% for admin in admin_context.admins %}
+                                    <tr>
+                                        <td>{{ admin.username }}</td>
+                                        <td>{{ admin.role_label }}</td>
+                                        <td>
+                                            {% if admin.permissions_display %}
+                                            <ul class="list-unstyled mb-0">
+                                                {% for perm in admin.permissions_display %}
+                                                <li class="d-flex align-items-center">
+                                                    <i class="fa-solid fa-circle-check text-success me-2 small"></i>
+                                                    <span>{{ perm }}</span>
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                            {% else %}
+                                            <span class="muted">None</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ admin.created_at or 'Unknown' }}</td>
+                                        <td class="text-end">
+                                            <a class="btn btn-sm btn-outline-primary me-1" href="#" data-edit-admin="{{ admin.username }}">
+                                                <i class="fa-solid fa-pen-to-square me-1"></i>Edit
+                                            </a>
+                                            {% if admin_context.can_view_logs %}
+                                            <a class="btn btn-sm btn-outline-secondary me-1" href="{{ url_for('logs.logs_for_user', username=admin.username) }}">
+                                                <i class="fa-solid fa-clipboard-list me-1"></i>Logs
+                                            </a>
+                                            {% endif %}
+                                            <form method="post" action="{{ url_for('settings.manage_admins') }}" class="d-inline" onsubmit="return confirm('Delete admin {{ admin.username }}?');">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="username" value="{{ admin.username }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="table-empty mt-3">
+                            <p class="mb-0">No admin accounts found.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="modal fade" id="modal-add-admin" tabindex="-1" aria-labelledby="modal-add-admin-label" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="modal-add-admin-label">Add Administrator</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form method="post" action="{{ url_for('settings.manage_admins') }}">
+                                <div class="modal-body">
+                                    <input type="hidden" name="action" value="add">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label for="username" class="form-label">Username</label>
+                                            <input id="username" name="username" class="form-control" required maxlength="120">
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label for="password" class="form-label">Password</label>
+                                            <input id="password" name="password" type="password" class="form-control" required autocomplete="new-password">
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label for="confirm" class="form-label">Confirm password</label>
+                                            <input id="confirm" name="confirm" type="password" class="form-control" required autocomplete="new-password">
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label for="role" class="form-label">Role</label>
+                                            <select id="role" name="role" class="form-select" data-role-select="add">
+                                                {% for role in admin_context.roles %}
+                                                    <option value="{{ role.name }}" data-description="{{ role.description|e }}">{{ role.label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <p class="muted mt-2" data-role-description="add"></p>
+                                        </div>
+
+                                        <div class="col-12" data-custom-for="add" style="display: none;">
+                                            <p class="muted mb-2">Select the permissions granted to this custom role.</p>
+                                            <div class="d-grid gap-2">
+                                                {% for perm in admin_context.permissions %}
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="custom_permissions" value="{{ perm.name }}" id="add-perm-{{ perm.name }}">
+                                                    <label class="form-check-label" for="add-perm-{{ perm.name }}">{{ perm.label }}</label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Add admin</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="modal-update-admin" tabindex="-1" aria-labelledby="modal-update-admin-label" aria-hidden="true">
+                    <div class="modal-dialog modal-lg modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="modal-update-admin-label">Update Administrator</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form method="post" action="{{ url_for('settings.manage_admins') }}" id="edit-admin-form">
+                                <div class="modal-body">
+                                    <input type="hidden" name="action" value="update">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label for="edit_username" class="form-label">Administrator</label>
+                                            <select id="edit_username" name="username" class="form-select" required>
+                                                <option value="" disabled selected>Select an admin account</option>
+                                                {% for admin in admin_context.admins %}
+                                                    <option value="{{ admin.username }}">{{ admin.username }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+
+                                        <div class="col-12">
+                                            <label for="edit_role" class="form-label">Role</label>
+                                            <select id="edit_role" name="role" class="form-select" data-role-select="edit">
+                                                {% for role in admin_context.roles %}
+                                                    <option value="{{ role.name }}" data-description="{{ role.description|e }}">{{ role.label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <p class="muted mt-2" data-role-description="edit"></p>
+                                        </div>
+
+                                        <div class="col-12" data-custom-for="edit" style="display: none;">
+                                            <p class="muted mb-2">Select the permissions this admin should retain.</p>
+                                            <div class="d-grid gap-2">
+                                                {% for perm in admin_context.permissions %}
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="custom_permissions" value="{{ perm.name }}" id="edit-perm-{{ perm.name }}">
+                                                    <label class="form-check-label" for="edit-perm-{{ perm.name }}">{{ perm.label }}</label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary">Update admin</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <div class="col-md-6">
-                <label for="session_cookie_samesite" class="form-label">Session cookie SameSite</label>
-                <select id="session_cookie_samesite" name="session_cookie_samesite" class="form-select">
-                    {% for option in ["Lax", "Strict", "None"] %}
-                        <option value="{{ option }}" {% if option == current.session_cookie_samesite %}selected{% endif %}>{{ option }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="col-12">
-                <label for="exe_types" class="form-label">Executable types (comma separated)</label>
-                <input id="exe_types" name="exe_types" class="form-control" value="{{ current.exe_types }}" placeholder="standard, elevated, portable">
-            </div>
-
-            <div class="col-12 d-flex flex-column flex-md-row gap-3 mt-2">
-                <button type="submit" class="btn btn-primary flex-fill">Save settings</button>
-                <a class="btn btn-outline-secondary flex-fill" href="{{ url_for('dashboard.dashboard') }}">Back to dashboard</a>
-            </div>
-        </form>
+            {% endif %}
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if admin_context %}
+<script>
+(function () {
+    const roleSelects = Array.from(document.querySelectorAll('[data-role-select]'));
+    const roleMeta = {{ admin_context.roles|tojson }};
+    const admins = {{ admin_context.admins|tojson }};
+    const hasBootstrap = typeof bootstrap !== 'undefined';
+
+    const roleDescriptionMap = {};
+    roleMeta.forEach(function (role) {
+        roleDescriptionMap[role.name] = role.description;
+    });
+
+    const adminLookup = {};
+    admins.forEach(function (admin) {
+        adminLookup[admin.username] = admin;
+    });
+
+    function applyRoleDescription(select) {
+        const target = select.getAttribute('data-role-select');
+        const descriptionEl = document.querySelector('[data-role-description="' + target + '"]');
+        if (!descriptionEl) return;
+        descriptionEl.textContent = roleDescriptionMap[select.value] || '';
+    }
+
+    function toggleCustomPermissions(select, preset) {
+        const target = select.getAttribute('data-role-select');
+        const container = document.querySelector('[data-custom-for="' + target + '"]');
+        if (!container) return;
+
+        const isCustom = select.value === 'custom';
+        container.style.display = isCustom ? 'block' : 'none';
+
+        const checkboxes = Array.from(container.querySelectorAll('input[type="checkbox"]'));
+        if (!isCustom) {
+            checkboxes.forEach(function (box) {
+                box.checked = false;
+            });
+            return;
+        }
+
+        const selected = new Set(preset || []);
+        checkboxes.forEach(function (box) {
+            box.checked = selected.has(box.value);
+        });
+    }
+
+    roleSelects.forEach(function (select) {
+        applyRoleDescription(select);
+        toggleCustomPermissions(select);
+        select.addEventListener('change', function () {
+            applyRoleDescription(select);
+            toggleCustomPermissions(select);
+        });
+    });
+
+    const addModalEl = document.getElementById('modal-add-admin');
+    if (addModalEl) {
+        addModalEl.addEventListener('shown.bs.modal', function () {
+            const firstField = addModalEl.querySelector('#username');
+            if (firstField) {
+                firstField.focus();
+            }
+        });
+        addModalEl.addEventListener('hidden.bs.modal', function () {
+            const form = addModalEl.querySelector('form');
+            if (form) {
+                form.reset();
+            }
+            const roleSelect = addModalEl.querySelector('[data-role-select="add"]');
+            if (roleSelect) {
+                applyRoleDescription(roleSelect);
+                toggleCustomPermissions(roleSelect);
+            }
+        });
+    }
+
+    const editUsername = document.getElementById('edit_username');
+    const editRole = document.getElementById('edit_role');
+    const updateModalEl = document.getElementById('modal-update-admin');
+    const updateModalInstance = updateModalEl && hasBootstrap && bootstrap.Modal
+        ? bootstrap.Modal.getOrCreateInstance(updateModalEl)
+        : null;
+
+    function syncAdminSelection(username) {
+        if (!editRole) {
+            return;
+        }
+        const admin = adminLookup[username];
+        if (!admin) {
+            if (editRole.options.length) {
+                editRole.selectedIndex = 0;
+            }
+            applyRoleDescription(editRole);
+            toggleCustomPermissions(editRole);
+            return;
+        }
+        editRole.value = admin.role;
+        applyRoleDescription(editRole);
+        toggleCustomPermissions(editRole, admin.resolved_permissions || []);
+    }
+
+    if (editUsername && editRole) {
+        editUsername.addEventListener('change', function () {
+            syncAdminSelection(editUsername.value);
+        });
+
+        if (updateModalEl) {
+            updateModalEl.addEventListener('shown.bs.modal', function () {
+                if (!editUsername.value && editUsername.options.length > 1) {
+                    editUsername.value = editUsername.options[1].value;
+                }
+                syncAdminSelection(editUsername.value);
+                const focusTarget = updateModalEl.querySelector('#edit_username');
+                if (focusTarget) {
+                    focusTarget.focus();
+                }
+            });
+            updateModalEl.addEventListener('hidden.bs.modal', function () {
+                syncAdminSelection(editUsername.value);
+            });
+        }
+
+        if (editUsername.value) {
+            syncAdminSelection(editUsername.value);
+        }
+
+        const editButtons = Array.from(document.querySelectorAll('[data-edit-admin]'));
+        editButtons.forEach(function (button) {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                const targetUser = button.getAttribute('data-edit-admin');
+                if (!targetUser) {
+                    return;
+                }
+                editUsername.value = targetUser;
+                syncAdminSelection(targetUser);
+
+                const tabTrigger = document.querySelector('#tab-admins-btn');
+                if (tabTrigger && !tabTrigger.classList.contains('active') && hasBootstrap && bootstrap.Tab) {
+                    const tabInstance = bootstrap.Tab.getOrCreateInstance(tabTrigger);
+                    tabInstance.show();
+                }
+
+                if (updateModalInstance) {
+                    updateModalInstance.show();
+                } else if (updateModalEl) {
+                    updateModalEl.classList.add('show');
+                }
+            });
+        });
+    }
+})();
+</script>
+{% endif %}
 {% endblock %}

@@ -8,9 +8,66 @@
                 <h2 class="mb-1"><i class="fa-solid fa-microchip me-2"></i>Activity for {{ exe_name }}</h2>
                 <p class="muted mb-0">Audit trail of administrator interactions for executable <code>{{ exe_id }}</code>.</p>
             </div>
-            <a class="btn btn-outline-secondary" href="{{ url_for('logs.logs_index') }}">
-                <i class="fa-solid fa-arrow-left me-1"></i>Back to logs
-            </a>
+            <div class="d-flex flex-column flex-md-row gap-2">
+                <a class="btn btn-outline-secondary" href="{{ url_for('logs.logs_index') }}">
+                    <i class="fa-solid fa-arrow-left me-1"></i>Back to logs
+                </a>
+                {% if has_entries %}
+                <form method="post" class="d-inline" onsubmit="return confirm('Clear all logs for this executable?');">
+                    <input type="hidden" name="action" value="clear_executable">
+                    {% for key, value in selected_filters.items() %}
+                        {% if value %}
+                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                        {% endif %}
+                    {% endfor %}
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fa-solid fa-trash-can me-1"></i>Clear logs
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label for="filter-priority" class="form-label">Priority</label>
+                    <select id="filter-priority" name="priority" class="form-select">
+                        <option value="">All priorities</option>
+                        {% for priority in priorities %}
+                        <option value="{{ priority }}"{% if selected_filters.priority|lower == priority|lower %} selected{% endif %}>{{ priority|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="filter-source" class="form-label">Source</label>
+                    <select id="filter-source" name="source" class="form-select">
+                        <option value="">All sources</option>
+                        {% for source in sources %}
+                        <option value="{{ source }}"{% if selected_filters.source|lower == source|lower %} selected{% endif %}>{{ source|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="filter-tag" class="form-label">Tag</label>
+                    <select id="filter-tag" name="tag" class="form-select">
+                        <option value="">All tags</option>
+                        {% for tag in tags %}
+                        <option value="{{ tag }}"{% if selected_filters.tag|lower == tag|lower %} selected{% endif %}>{{ tag|capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="filter-search" class="form-label">Search</label>
+                    <input id="filter-search" name="q" class="form-control" placeholder="Search message, user, metadata" value="{{ selected_filters.q }}">
+                </div>
+                <div class="col-12 d-flex flex-column flex-md-row gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill"><i class="fa-solid fa-filter me-1"></i>Apply filters</button>
+                    <a class="btn btn-outline-secondary flex-fill" href="{{ url_for('logs.logs_for_executable', exe_id=exe_id) }}">
+                        <i class="fa-solid fa-rotate-left me-1"></i>Reset
+                    </a>
+                </div>
+            </form>
         </div>
 
         {% if entries %}
@@ -24,6 +81,7 @@
                         <th scope="col">Tag</th>
                         <th scope="col">Action</th>
                         <th scope="col">Details</th>
+                        <th scope="col" class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -58,6 +116,20 @@
                                 {% endfor %}
                             </div>
                             {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <form method="post" class="d-inline" onsubmit="return confirm('Delete this log entry?');">
+                                <input type="hidden" name="action" value="delete_entry">
+                                <input type="hidden" name="entry_id" value="{{ entry.id }}">
+                                {% for key, value in selected_filters.items() %}
+                                    {% if value %}
+                                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                                    {% endif %}
+                                {% endfor %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="fa-solid fa-trash-can me-1"></i>Delete
+                                </button>
+                            </form>
                         </td>
                     </tr>
                 {% endfor %}

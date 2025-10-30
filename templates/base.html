@@ -47,13 +47,6 @@
                         </a>
                     </li>
                     {% endif %}
-                    {% if 'manage_admins' in perms %}
-                    <li class="nav-item">
-                        <a class="nav-link{% if request.endpoint == 'settings.manage_admins' %} active{% endif %}" href="{{ url_for('settings.manage_admins') }}">
-                            <i class="fa-solid fa-users-gear me-1"></i>Admin accounts
-                        </a>
-                    </li>
-                    {% endif %}
                     <li class="nav-item ms-lg-3 mt-3 mt-lg-0">
                         <a class="btn btn-sm btn-outline-light" href="{{ url_for('auth.logout') }}">
                             <i class="fa-solid fa-right-from-bracket me-1"></i>Log out

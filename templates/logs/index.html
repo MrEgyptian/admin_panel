@@ -1,62 +1,95 @@
 {% extends "base.html" %}
 {% block title %}Activity Logs{% endblock %}
 {% block content %}
-<div class="card app-card shadow-sm mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-12 col-md-3">
-                <label for="filter-priority" class="form-label">Priority</label>
-                <select id="filter-priority" name="priority" class="form-select">
-                    <option value="">All priorities</option>
-                    {% for priority in priorities %}
-                    <option value="{{ priority }}"{% if selected_filters.priority|lower == priority|lower %} selected{% endif %}>{{ priority|capitalize }}</option>
-                    {% endfor %}
-                </select>
+<div class="bg-body border rounded-3 shadow-sm">
+    <div class="border-bottom px-4 py-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <h1 class="h4 mb-1"><i class="fa-solid fa-chart-line me-2"></i>Activity Logs</h1>
+                <p class="muted mb-0">Monitor user actions, executable performance, and recent system events.</p>
             </div>
-            <div class="col-12 col-md-3">
-                <label for="filter-source" class="form-label">Source</label>
-                <select id="filter-source" name="source" class="form-select">
-                    <option value="">All sources</option>
-                    {% for source in sources %}
-                    <option value="{{ source }}"{% if selected_filters.source|lower == source|lower %} selected{% endif %}>{{ source|capitalize }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-12 col-md-3">
-                <label for="filter-tag" class="form-label">Tag</label>
-                <select id="filter-tag" name="tag" class="form-select">
-                    <option value="">All tags</option>
-                    {% for tag in tags %}
-                    <option value="{{ tag }}"{% if selected_filters.tag|lower == tag|lower %} selected{% endif %}>{{ tag|capitalize }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-12 col-md-3">
-                <label for="filter-search" class="form-label">Search</label>
-                <input id="filter-search" name="q" class="form-control" placeholder="Search message, user, metadata" value="{{ selected_filters.q }}">
-            </div>
-            <div class="col-12 d-flex flex-column flex-md-row gap-2">
-                <button type="submit" class="btn btn-primary flex-fill"><i class="fa-solid fa-filter me-1"></i>Apply filters</button>
-                <a class="btn btn-outline-secondary flex-fill" href="{{ url_for('logs.logs_index') }}">
-                    <i class="fa-solid fa-rotate-left me-1"></i>Reset
-                </a>
-            </div>
-        </form>
+        </div>
     </div>
-</div>
+    <div class="px-4 pt-3 pb-4">
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link{% if active_tab == 'user' %} active{% endif %}" id="tab-user-link" href="{{ tab_links.user }}" role="tab" aria-controls="tab-user" aria-selected="{{ 'true' if active_tab == 'user' else 'false' }}">
+                    <i class="fa-solid fa-user-shield me-1"></i>User Activity
+                    <span class="badge bg-primary-subtle text-primary ms-2">{{ user_total }}</span>
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link{% if active_tab == 'exe' %} active{% endif %}" id="tab-exe-link" href="{{ tab_links.exe }}" role="tab" aria-controls="tab-exe" aria-selected="{{ 'true' if active_tab == 'exe' else 'false' }}">
+                    <i class="fa-solid fa-microchip me-1"></i>Executable Activity
+                    <span class="badge bg-primary-subtle text-primary ms-2">{{ exe_total }}</span>
+                </a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link{% if active_tab == 'event' %} active{% endif %}" id="tab-event-link" href="{{ tab_links.event }}" role="tab" aria-controls="tab-event" aria-selected="{{ 'true' if active_tab == 'event' else 'false' }}">
+                    <i class="fa-solid fa-clock-rotate-left me-1"></i>Recent Events
+                    <span class="badge bg-primary-subtle text-primary ms-2">{{ event_total }}</span>
+                </a>
+            </li>
+        </ul>
 
-<div class="row g-4">
-    <div class="col-12 col-lg-4">
-        <div class="card app-card shadow-sm h-100">
-            <div class="card-body">
-                <h2 class="h5 mb-3"><i class="fa-solid fa-user-shield me-2"></i>User Activity</h2>
+        <div class="tab-content pt-4">
+            <div class="tab-pane fade{% if active_tab == 'user' %} show active{% endif %}" id="tab-user" role="tabpanel" aria-labelledby="tab-user-link">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                    <div>
+                        <h2 class="h5 mb-1">User Activity</h2>
+                        <p class="muted mb-0">Summaries filtered by user-level events.</p>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary align-self-start text-uppercase">{{ user_total }} events</span>
+                </div>
+                <form method="get" class="row g-2 align-items-end mb-3">
+                    <input type="hidden" name="tab" value="user">
+                    {% for key, value in preserve_for_user.items() %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endfor %}
+                    <div class="col-12 col-xl-6">
+                        <label for="user-filter-priority" class="form-label">Priority</label>
+                        <select id="user-filter-priority" name="user_priority" class="form-select">
+                            <option value="">All priorities</option>
+                            {% for priority in priorities %}
+                            <option value="{{ priority }}"{% if user_filters.priority|lower == priority|lower %} selected{% endif %}>{{ priority|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <label for="user-filter-source" class="form-label">Source</label>
+                        <select id="user-filter-source" name="user_source" class="form-select">
+                            <option value="">All sources</option>
+                            {% for source in sources %}
+                            <option value="{{ source }}"{% if user_filters.source|lower == source|lower %} selected{% endif %}>{{ source|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <label for="user-filter-tag" class="form-label">Tag</label>
+                        <select id="user-filter-tag" name="user_tag" class="form-select">
+                            <option value="">All tags</option>
+                            {% for tag in tags %}
+                            <option value="{{ tag }}"{% if user_filters.tag|lower == tag|lower %} selected{% endif %}>{{ tag|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <label for="user-filter-search" class="form-label">Search</label>
+                        <input id="user-filter-search" name="user_q" class="form-control" placeholder="Search message, metadata" value="{{ user_filters.q }}">
+                    </div>
+                    <div class="col-12 d-flex flex-column flex-xl-row gap-2">
+                        <button type="submit" class="btn btn-primary flex-fill"><i class="fa-solid fa-filter me-1"></i>Apply</button>
+                        <a class="btn btn-outline-secondary flex-fill" href="{{ reset_user_url }}"><i class="fa-solid fa-rotate-left me-1"></i>Reset</a>
+                    </div>
+                </form>
                 {% if user_summary %}
                 <div class="table-responsive">
-                    <table class="table table-sm align-middle">
+                    <table class="table table-sm align-middle mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th scope="col">User</th>
                                 <th scope="col" class="text-end">Events</th>
+                                <th scope="col" class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -64,12 +97,25 @@
                             <tr>
                                 <td>
                                     {% if row.username %}
-                                    <a href="{{ url_for('logs.logs_for_user', username=row.username) }}">{{ row.username }}</a>
+                                    <a href="{{ url_for('logs.logs_for_user', username=row.username) }}">{{ row.display }}</a>
                                     {% else %}
-                                    <span class="muted">Unknown</span>
+                                    <span class="muted">{{ row.display }}</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-end">{{ row.count }}</td>
+                                <td class="text-end">
+                                    <form method="post" action="{{ url_for('logs.logs_index') }}" class="d-inline" onsubmit="return confirm('Clear logs for {{ row.display }}?');">
+                                        <input type="hidden" name="action" value="clear_user">
+                                        <input type="hidden" name="username" value="{{ row.value }}">
+                                        <input type="hidden" name="active_tab" value="user">
+                                        {% for key, value in all_filters.items() %}
+                                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                                        {% endfor %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fa-solid fa-broom me-1"></i>Clear
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                         {% endfor %}
                         </tbody>
@@ -79,20 +125,64 @@
                 <p class="muted mb-0">No activity recorded yet.</p>
                 {% endif %}
             </div>
-        </div>
-    </div>
 
-    <div class="col-12 col-lg-4">
-        <div class="card app-card shadow-sm h-100">
-            <div class="card-body">
-                <h2 class="h5 mb-3"><i class="fa-solid fa-microchip me-2"></i>Executable Activity</h2>
+            <div class="tab-pane fade{% if active_tab == 'exe' %} show active{% endif %}" id="tab-exe" role="tabpanel" aria-labelledby="tab-exe-link">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                    <div>
+                        <h2 class="h5 mb-1">Executable Activity</h2>
+                        <p class="muted mb-0">Track events attributed to each executable.</p>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary align-self-start text-uppercase">{{ exe_total }} events</span>
+                </div>
+                <form method="get" class="row g-2 align-items-end mb-3">
+                    <input type="hidden" name="tab" value="exe">
+                    {% for key, value in preserve_for_exe.items() %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endfor %}
+                    <div class="col-12 col-xl-6">
+                        <label for="exe-filter-priority" class="form-label">Priority</label>
+                        <select id="exe-filter-priority" name="exe_priority" class="form-select">
+                            <option value="">All priorities</option>
+                            {% for priority in priorities %}
+                            <option value="{{ priority }}"{% if exe_filters.priority|lower == priority|lower %} selected{% endif %}>{{ priority|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <label for="exe-filter-source" class="form-label">Source</label>
+                        <select id="exe-filter-source" name="exe_source" class="form-select">
+                            <option value="">All sources</option>
+                            {% for source in sources %}
+                            <option value="{{ source }}"{% if exe_filters.source|lower == source|lower %} selected{% endif %}>{{ source|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <label for="exe-filter-tag" class="form-label">Tag</label>
+                        <select id="exe-filter-tag" name="exe_tag" class="form-select">
+                            <option value="">All tags</option>
+                            {% for tag in tags %}
+                            <option value="{{ tag }}"{% if exe_filters.tag|lower == tag|lower %} selected{% endif %}>{{ tag|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <label for="exe-filter-search" class="form-label">Search</label>
+                        <input id="exe-filter-search" name="exe_q" class="form-control" placeholder="Search metadata" value="{{ exe_filters.q }}">
+                    </div>
+                    <div class="col-12 d-flex flex-column flex-xl-row gap-2">
+                        <button type="submit" class="btn btn-primary flex-fill"><i class="fa-solid fa-filter me-1"></i>Apply</button>
+                        <a class="btn btn-outline-secondary flex-fill" href="{{ reset_exe_url }}"><i class="fa-solid fa-rotate-left me-1"></i>Reset</a>
+                    </div>
+                </form>
                 {% if exe_summary %}
                 <div class="table-responsive">
-                    <table class="table table-sm align-middle">
+                    <table class="table table-sm align-middle mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th scope="col">Executable</th>
                                 <th scope="col" class="text-end">Events</th>
+                                <th scope="col" class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -102,10 +192,27 @@
                                     {% if row.exe_id %}
                                     <a href="{{ url_for('logs.logs_for_executable', exe_id=row.exe_id) }}">{{ row.exe_name }}</a>
                                     {% else %}
-                                    <span class="muted">System</span>
+                                    <span class="muted">{{ row.exe_name }}</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-end">{{ row.count }}</td>
+                                <td class="text-end">
+                                    {% if row.can_clear %}
+                                    <form method="post" action="{{ url_for('logs.logs_index') }}" class="d-inline" onsubmit="return confirm('Clear logs for executable {{ row.exe_name }}?');">
+                                        <input type="hidden" name="action" value="clear_executable">
+                                        <input type="hidden" name="exe_id" value="{{ row.exe_id }}">
+                                        <input type="hidden" name="active_tab" value="exe">
+                                        {% for key, value in all_filters.items() %}
+                                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                                        {% endfor %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fa-solid fa-broom me-1"></i>Clear
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span class="muted small">System</span>
+                                    {% endif %}
+                                </td>
                             </tr>
                         {% endfor %}
                         </tbody>
@@ -115,16 +222,71 @@
                 <p class="muted mb-0">No executable activity yet.</p>
                 {% endif %}
             </div>
-        </div>
-    </div>
 
-    <div class="col-12 col-lg-4">
-        <div class="card app-card shadow-sm h-100">
-            <div class="card-body">
-                <h2 class="h5 mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Recent Events</h2>
-                {% if entries %}
+            <div class="tab-pane fade{% if active_tab == 'event' %} show active{% endif %}" id="tab-event" role="tabpanel" aria-labelledby="tab-event-link">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                    <div>
+                        <h2 class="h5 mb-1">Recent Events</h2>
+                        <p class="muted mb-0">Latest log entries with detailed context.</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary-subtle text-primary text-uppercase">{{ event_total }} events</span>
+                        <form method="post" action="{{ url_for('logs.logs_index') }}" onsubmit="return confirm('Clear all log entries?');">
+                            <input type="hidden" name="action" value="clear_all">
+                            <input type="hidden" name="active_tab" value="event">
+                            {% for key, value in all_filters.items() %}
+                            <input type="hidden" name="{{ key }}" value="{{ value }}">
+                            {% endfor %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="fa-solid fa-trash-can me-1"></i>Clear all
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <form method="get" class="row g-2 align-items-end mb-3">
+                    <input type="hidden" name="tab" value="event">
+                    {% for key, value in preserve_for_event.items() %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                    {% endfor %}
+                    <div class="col-12 col-xl-6">
+                        <label for="event-filter-priority" class="form-label">Priority</label>
+                        <select id="event-filter-priority" name="event_priority" class="form-select">
+                            <option value="">All priorities</option>
+                            {% for priority in priorities %}
+                            <option value="{{ priority }}"{% if event_filters.priority|lower == priority|lower %} selected{% endif %}>{{ priority|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <label for="event-filter-source" class="form-label">Source</label>
+                        <select id="event-filter-source" name="event_source" class="form-select">
+                            <option value="">All sources</option>
+                            {% for source in sources %}
+                            <option value="{{ source }}"{% if event_filters.source|lower == source|lower %} selected{% endif %}>{{ source|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <label for="event-filter-tag" class="form-label">Tag</label>
+                        <select id="event-filter-tag" name="event_tag" class="form-select">
+                            <option value="">All tags</option>
+                            {% for tag in tags %}
+                            <option value="{{ tag }}"{% if event_filters.tag|lower == tag|lower %} selected{% endif %}>{{ tag|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <label for="event-filter-search" class="form-label">Search</label>
+                        <input id="event-filter-search" name="event_q" class="form-control" placeholder="Search message, metadata" value="{{ event_filters.q }}">
+                    </div>
+                    <div class="col-12 d-flex flex-column flex-xl-row gap-2">
+                        <button type="submit" class="btn btn-primary flex-fill"><i class="fa-solid fa-filter me-1"></i>Apply</button>
+                        <a class="btn btn-outline-secondary flex-fill" href="{{ reset_event_url }}"><i class="fa-solid fa-rotate-left me-1"></i>Reset</a>
+                    </div>
+                </form>
+                {% if event_entries %}
                 <div class="table-responsive">
-                    <table class="table table-sm table-hover align-middle">
+                    <table class="table table-sm table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
                                 <th scope="col">When</th>
@@ -136,7 +298,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                        {% for entry in entries %}
+                        {% for entry in event_entries %}
                             <tr>
                                 <td class="text-nowrap">{{ entry.timestamp_display }}</td>
                                 <td>
