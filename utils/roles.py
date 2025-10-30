@@ -12,6 +12,10 @@ AVAILABLE_PERMISSIONS: List[Dict[str, str]] = [
         "label": "Create, revoke, and delete executables",
     },
     {
+        "name": "view_logs",
+        "label": "Review activity logs",
+    },
+    {
         "name": "manage_settings",
         "label": "Update application configuration",
     },
@@ -33,6 +37,7 @@ ROLE_DEFINITIONS: Dict[str, Dict[str, object]] = {
         "permissions": [
             "view_dashboard",
             "manage_executables",
+            "view_logs",
             "manage_settings",
             "manage_admins",
         ],
@@ -40,7 +45,7 @@ ROLE_DEFINITIONS: Dict[str, Dict[str, object]] = {
     "normal_admin": {
         "label": "Normal Admin",
         "description": "Manage executables only.",
-        "permissions": ["view_dashboard", "manage_executables"],
+        "permissions": ["view_dashboard", "manage_executables", "view_logs"],
     },
     "custom": {
         "label": "Custom",

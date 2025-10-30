@@ -18,6 +18,7 @@ from flask import (
 
 from routes.decorators import login_required, require_permission, session_is_authenticated
 from utils.exe import compute_status, generate_stub_executable, load_executables, save_executables
+from utils.logs import append_log_entry
 from utils.time import parse_form_date, parse_iso_date
 
 
@@ -44,6 +45,41 @@ def _find_executable(exe_id: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _log_executable_event(
+    exe_id: Optional[str],
+    action: str,
+    message: str,
+    metadata: Optional[Dict[str, Any]] = None,
+    *,
+    priority: str = "info",
+    source: str = "dashboard",
+    tag: Optional[str] = None,
+) -> None:
+    try:
+        combined_metadata = dict(metadata or {})
+        try:
+            remote_addr = request.remote_addr  # type: ignore[assignment]
+        except RuntimeError:
+            remote_addr = None
+        if remote_addr and "remote_addr" not in combined_metadata:
+            combined_metadata["remote_addr"] = remote_addr
+
+        append_log_entry(
+            current_app.config["LOGS_FILE"],
+            username=session.get("user"),
+            exe_id=exe_id,
+            action=action,
+            message=message,
+            metadata=combined_metadata,
+            priority=priority,
+            source=source,
+            tag=tag or action,
+            logger=current_app.logger,
+        )
+    except Exception:  # pragma: no cover - logging must not break core flow
+        current_app.logger.exception("Failed to write executable log entry")
+
+
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
@@ -60,8 +96,15 @@ def index():
 def dashboard():
     executables = [compute_status(item) for item in _load_executables()]
     executables.sort(key=lambda item: item.get("created_at", ""), reverse=True)
-    can_manage = "manage_executables" in (session.get("permissions") or [])
-    return render_template("dashboard.html", executables=executables, can_manage_executables=can_manage)
+    permissions = session.get("permissions") or []
+    can_manage = "manage_executables" in permissions
+    can_view_logs = "view_logs" in permissions
+    return render_template(
+        "dashboard.html",
+        executables=executables,
+        can_manage_executables=can_manage,
+        can_view_logs=can_view_logs,
+    )
 
 
 @dashboard_bp.route("/executables/new", methods=["GET", "POST"])
@@ -125,6 +168,21 @@ def new_executable():
 
         executables.append(new_record)
         _save_executables(executables)
+
+        _log_executable_event(
+            exe_id,
+            "create",
+            f"Executable '{name}' created",
+            {
+                "exe_name": name,
+                "type": exe_type,
+                "available_from": available_from,
+                "expiry_date": expiry_date,
+                "server_url": server_url or None,
+            },
+            priority="medium",
+            tag=exe_type,
+        )
         flash(f"Executable '{name}' generated successfully.", "success")
         return redirect(url_for("dashboard.dashboard"))
 
@@ -208,6 +266,20 @@ def edit_executable(exe_id: str):
         executables[index] = executable
         _save_executables(executables)
 
+        _log_executable_event(
+            exe_id,
+            "update",
+            f"Executable '{name}' updated",
+            {
+                "exe_name": name,
+                "type": exe_type,
+                "available_from": available_from,
+                "expiry_date": expiry_date,
+                "server_url": server_url or None,
+            },
+            priority="medium",
+            tag=exe_type,
+        )
         flash(f"Executable '{name}' updated.", "success")
         return redirect(url_for("dashboard.dashboard"))
 
@@ -231,6 +303,14 @@ def toggle_executable(exe_id: str):
     _save_executables(executables)
 
     state = "revoked" if executable["revoked"] else "reinstated"
+    _log_executable_event(
+        exe_id,
+        "toggle",
+        f"Executable '{executable['name']}' {state}.",
+        {"exe_name": executable.get("name"), "revoked": executable["revoked"]},
+        priority="high" if executable["revoked"] else "medium",
+        tag=executable.get("type"),
+    )
     flash(f"Executable '{executable['name']}' {state}.", "success")
     return redirect(url_for("dashboard.dashboard"))
 
@@ -240,8 +320,15 @@ def toggle_executable(exe_id: str):
 @require_permission("manage_executables")
 def delete_executable(exe_id: str):
     executables = _load_executables()
-    filtered = [item for item in executables if item.get("id") != exe_id]
-    if len(filtered) == len(executables):
+    to_delete: Optional[Dict[str, Any]] = None
+    filtered: List[Dict[str, Any]] = []
+    for item in executables:
+        if item.get("id") == exe_id:
+            to_delete = item
+            continue
+        filtered.append(item)
+
+    if to_delete is None:
         abort(404)
 
     _save_executables(filtered)
@@ -250,6 +337,14 @@ def delete_executable(exe_id: str):
     if file_path.exists():
         file_path.unlink()
 
+    _log_executable_event(
+        exe_id,
+        "delete",
+        f"Executable '{to_delete.get('name', exe_id)}' deleted.",
+        {"exe_name": to_delete.get("name"), "type": to_delete.get("type")},
+        priority="critical",
+        tag=to_delete.get("type"),
+    )
     flash("Executable deleted.", "success")
     return redirect(url_for("dashboard.dashboard"))
 
@@ -272,4 +367,12 @@ def download_executable(exe_id: str):
         flash("Executable file is missing on the server.", "error")
         return redirect(url_for("dashboard.dashboard"))
 
+    _log_executable_event(
+        exe_id,
+        "download",
+        f"Executable '{executable.get('name', exe_id)}' downloaded.",
+        {"exe_name": executable.get("name"), "file_name": file_name},
+        priority="low",
+        tag=executable.get("type"),
+    )
     return send_from_directory(str(_files_dir()), file_name, as_attachment=True)

@@ -12,6 +12,7 @@ DATA_DIR = BASE_DIR / "data"
 FILES_DIR = BASE_DIR / "generated_exes"
 DATA_FILE = DATA_DIR / "executables.json"
 ADMINS_FILE = DATA_DIR / "admins.json"
+LOGS_FILE = DATA_DIR / "logs.json"
 CONFIG_FILE = BASE_DIR / "config.ini"
 
 for directory in (DATA_DIR, FILES_DIR):
@@ -56,6 +57,7 @@ app.config.update(
     DATA_FILE=DATA_FILE,
     ADMINS_FILE=ADMINS_FILE,
     FILES_DIR=FILES_DIR,
+    LOGS_FILE=LOGS_FILE,
     CONFIG_FILE=CONFIG_FILE,
     DEFAULT_ADMIN_USERNAME=default_admin_username,
     DEFAULT_ADMIN_PASSWORD=default_admin_password,

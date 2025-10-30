@@ -58,6 +58,11 @@
 							<button type="button" class="btn btn-outline-secondary btn-sm ms-1" data-copy="{{ url_for('dashboard.download_executable', exe_id=exe.id, _external=True) }}">
 								<i class="fa-solid fa-link me-1"></i>Copy link
 							</button>
+							{% if can_view_logs %}
+							<a class="btn btn-outline-secondary btn-sm ms-1" href="{{ url_for('logs.logs_for_executable', exe_id=exe.id) }}">
+								<i class="fa-solid fa-clipboard-list me-1"></i>Logs
+							</a>
+							{% endif %}
 							{% if can_manage_executables %}
 							<a class="btn btn-outline-secondary btn-sm ms-1" href="{{ url_for('dashboard.edit_executable', exe_id=exe.id) }}">
 								<i class="fa-solid fa-pen-to-square me-1"></i>Edit

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Activity Logs{% endblock %}
+{% block content %}
+<div class="card app-card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-md-3">
+                <label for="filter-priority" class="form-label">Priority</label>
+                <select id="filter-priority" name="priority" class="form-select">
+                    <option value="">All priorities</option>
+                    {% for priority in priorities %}
+                    <option value="{{ priority }}"{% if selected_filters.priority|lower == priority|lower %} selected{% endif %}>{{ priority|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="filter-source" class="form-label">Source</label>
+                <select id="filter-source" name="source" class="form-select">
+                    <option value="">All sources</option>
+                    {% for source in sources %}
+                    <option value="{{ source }}"{% if selected_filters.source|lower == source|lower %} selected{% endif %}>{{ source|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="filter-tag" class="form-label">Tag</label>
+                <select id="filter-tag" name="tag" class="form-select">
+                    <option value="">All tags</option>
+                    {% for tag in tags %}
+                    <option value="{{ tag }}"{% if selected_filters.tag|lower == tag|lower %} selected{% endif %}>{{ tag|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label for="filter-search" class="form-label">Search</label>
+                <input id="filter-search" name="q" class="form-control" placeholder="Search message, user, metadata" value="{{ selected_filters.q }}">
+            </div>
+            <div class="col-12 d-flex flex-column flex-md-row gap-2">
+                <button type="submit" class="btn btn-primary flex-fill"><i class="fa-solid fa-filter me-1"></i>Apply filters</button>
+                <a class="btn btn-outline-secondary flex-fill" href="{{ url_for('logs.logs_index') }}">
+                    <i class="fa-solid fa-rotate-left me-1"></i>Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-4">
+        <div class="card app-card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3"><i class="fa-solid fa-user-shield me-2"></i>User Activity</h2>
+                {% if user_summary %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">User</th>
+                                <th scope="col" class="text-end">Events</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in user_summary %}
+                            <tr>
+                                <td>
+                                    {% if row.username %}
+                                    <a href="{{ url_for('logs.logs_for_user', username=row.username) }}">{{ row.username }}</a>
+                                    {% else %}
+                                    <span class="muted">Unknown</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">{{ row.count }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="muted mb-0">No activity recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card app-card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3"><i class="fa-solid fa-microchip me-2"></i>Executable Activity</h2>
+                {% if exe_summary %}
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Executable</th>
+                                <th scope="col" class="text-end">Events</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in exe_summary %}
+                            <tr>
+                                <td>
+                                    {% if row.exe_id %}
+                                    <a href="{{ url_for('logs.logs_for_executable', exe_id=row.exe_id) }}">{{ row.exe_name }}</a>
+                                    {% else %}
+                                    <span class="muted">System</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">{{ row.count }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="muted mb-0">No executable activity yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-4">
+        <div class="card app-card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h5 mb-3"><i class="fa-solid fa-clock-rotate-left me-2"></i>Recent Events</h2>
+                {% if entries %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">When</th>
+                                <th scope="col">User</th>
+                                <th scope="col">Executable</th>
+                                <th scope="col">Priority</th>
+                                <th scope="col">Tag</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for entry in entries %}
+                            <tr>
+                                <td class="text-nowrap">{{ entry.timestamp_display }}</td>
+                                <td>
+                                    {% if entry.username_value %}
+                                    <a href="{{ url_for('logs.logs_for_user', username=entry.username_value) }}">{{ entry.username }}</a>
+                                    {% else %}
+                                    <span class="muted">{{ entry.username }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entry.exe_id %}
+                                    <a href="{{ url_for('logs.logs_for_executable', exe_id=entry.exe_id) }}">{{ entry.exe_name }}</a>
+                                    {% else %}
+                                    <span class="muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary-subtle text-primary text-uppercase">{{ entry.priority }}</span>
+                                </td>
+                                <td>
+                                    {% if entry.tag %}
+                                    <span class="badge bg-secondary-subtle text-secondary text-uppercase">{{ entry.tag }}</span>
+                                    {% else %}
+                                    <span class="muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-capitalize">{{ entry.action|replace('_', ' ') }}</div>
+                                    <div class="small">{{ entry.message }}</div>
+                                    <div class="small text-muted">Source: {{ entry.source }}</div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="muted mb-0">Logs will appear here as soon as activity is recorded.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

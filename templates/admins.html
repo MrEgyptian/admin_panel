@@ -37,6 +37,11 @@
                         </td>
                         <td>{{ admin.created_at or 'Unknown' }}</td>
                         <td class="text-end">
+                            {% if can_view_logs %}
+                            <a class="btn btn-sm btn-outline-secondary me-1" href="{{ url_for('logs.logs_for_user', username=admin.username) }}">
+                                <i class="fa-solid fa-clipboard-list me-1"></i>Logs
+                            </a>
+                            {% endif %}
                             <form method="post" action="{{ url_for('settings.manage_admins') }}" class="d-inline" onsubmit="return confirm('Delete admin {{ admin.username }}?');">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="username" value="{{ admin.username }}">

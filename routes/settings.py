@@ -251,4 +251,5 @@ def manage_admins():
         admins=enriched_admins,
         roles=role_options,
         permissions=AVAILABLE_PERMISSIONS,
+        can_view_logs="view_logs" in (session.get("permissions") or []),
     )

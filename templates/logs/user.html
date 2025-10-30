@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ username }} · Activity Logs{% endblock %}
+{% block content %}
+<div class="card app-card shadow-sm">
+    <div class="card-body">
+        <div class="app-page-head">
+            <div>
+                <h2 class="mb-1"><i class="fa-solid fa-user-shield me-2"></i>Activity for {{ username }}</h2>
+                <p class="muted mb-0">Audit trail of executable actions recorded for this administrator.</p>
+            </div>
+            <a class="btn btn-outline-secondary" href="{{ url_for('logs.logs_index') }}">
+                <i class="fa-solid fa-arrow-left me-1"></i>Back to logs
+            </a>
+        </div>
+
+        {% if entries %}
+        <div class="table-responsive mt-4">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Timestamp</th>
+                        <th scope="col">Executable</th>
+                        <th scope="col">Priority</th>
+                        <th scope="col">Tag</th>
+                        <th scope="col">Action</th>
+                        <th scope="col">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for entry in entries %}
+                    <tr>
+                        <td class="text-nowrap">{{ entry.timestamp_display }}</td>
+                        <td>
+                            {% if entry.exe_id %}
+                            <a href="{{ url_for('logs.logs_for_executable', exe_id=entry.exe_id) }}">{{ entry.exe_name }}</a>
+                            {% else %}
+                            <span class="muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-primary-subtle text-primary text-uppercase">{{ entry.priority }}</span>
+                        </td>
+                        <td>
+                            {% if entry.tag %}
+                            <span class="badge bg-secondary-subtle text-secondary text-uppercase">{{ entry.tag }}</span>
+                            {% else %}
+                            <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-capitalize">{{ entry.action|replace('_', ' ') }}</td>
+                        <td>
+                            <div>{{ entry.message }}</div>
+                            <div class="small text-muted">Source: {{ entry.source }}</div>
+                            {% if entry.metadata %}
+                            <div class="small text-muted mt-1">
+                                {% for key, value in entry.metadata.items() %}
+                                    <div><strong>{{ key|replace('_', ' ')|title }}:</strong> {{ value }}</div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="table-empty mt-4">
+            <p class="mb-0">No activity has been recorded for this user yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -3,7 +3,8 @@
     {
       "username": "admin",
       "password_hash": "scrypt:32768:8:1$FCPW026Z94gaEByz$59f76b32d9410791cff65f3dae88b5f95a101f5b94483e3eaf49ae068063ad7bdca5c57aef9f84b078a6fcb2a8a0546cd08565b64e79537899634ee2f6b0c23a",
-      "created_at": "2025-10-29T09:32:30.249287"
+      "created_at": "2025-10-29T09:32:30.249287",
+      "role": "god"
     }
   ]
 }
