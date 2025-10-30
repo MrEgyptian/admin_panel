@@ -21,355 +21,700 @@
 
         <div class="tab-content mt-4">
             <div class="tab-pane fade{% if active_tab == 'app' %} show active{% endif %}" id="tab-app" role="tabpanel" aria-labelledby="tab-app-btn">
-                <p class="muted mb-4">Update runtime configuration. Changes persist to <code>config.ini</code> and apply immediately.</p>
-                <form method="post" class="row g-3">
+                <form method="post" action="{{ url_for('settings.settings_index') }}" class="row g-4" enctype="multipart/form-data" novalidate>
                     <input type="hidden" name="active_tab" value="app">
-                    <div class="col-12">
+
+                    <div class="col-12 col-lg-6">
                         <label for="secret_key" class="form-label">Secret key</label>
-                        <input id="secret_key" name="secret_key" class="form-control" required value="{{ current.secret_key }}" autocomplete="off">
+                        <input id="secret_key" name="secret_key" class="form-control" value="{{ current.secret_key }}" required>
+                        <div class="form-text">Rotating this value signs out all users by invalidating existing sessions.</div>
                     </div>
 
-                    <div class="col-md-6">
-                        <div class="form-check form-switch mt-2">
-                            <input class="form-check-input" type="checkbox" role="switch" id="session_cookie_http_only" name="session_cookie_http_only" {% if current.session_cookie_http_only %}checked{% endif %}>
-                            <label class="form-check-label" for="session_cookie_http_only">Session cookie HTTP only</label>
+                    <div class="col-12 col-lg-3">
+                        <div class="form-check mt-4 pt-2">
+                            <input class="form-check-input" type="checkbox" id="session_cookie_http_only" name="session_cookie_http_only"{% if current.session_cookie_http_only %} checked{% endif %}>
+                            <label class="form-check-label" for="session_cookie_http_only">Session cookie HTTPOnly</label>
                         </div>
+                        <div class="form-text">Prevents client-side scripts from reading the session cookie.</div>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 col-lg-3">
                         <label for="session_cookie_samesite" class="form-label">Session cookie SameSite</label>
                         <select id="session_cookie_samesite" name="session_cookie_samesite" class="form-select">
-                            {% for option in ["Lax", "Strict", "None"] %}
-                                <option value="{{ option }}" {% if option == current.session_cookie_samesite %}selected{% endif %}>{{ option }}</option>
+                            {% for value in ['Lax', 'Strict', 'None'] %}
+                                <option value="{{ value }}"{% if current.session_cookie_samesite == value %} selected{% endif %}>{{ value }}</option>
                             {% endfor %}
                         </select>
+                        <div class="form-text">Controls cross-site cookie delivery for embedded or redirected flows.</div>
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label">Executable types</label>
-                        <div id="exe-types-wrapper" class="d-flex flex-column gap-2 mb-2">
-                            {% for exe_type in current.exe_types_list %}
-                            <div class="d-flex align-items-center gap-2 border rounded px-3 py-2" data-exe-type-item="true" data-value="{{ exe_type|lower }}">
-                                <input type="hidden" name="exe_types[]" value="{{ exe_type }}">
-                                <span class="flex-grow-1">{{ exe_type }}</span>
-                                <button type="button" class="btn btn-sm btn-outline-danger" data-remove-exe-type="true">
-                                    <i class="fa-solid fa-xmark me-1"></i>Remove
-                                </button>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <p id="exe-types-empty" class="muted mb-2"{% if current.exe_types_list %} style="display: none;"{% endif %}>No executable types defined yet.</p>
-                        <div class="input-group">
-                            <input id="exe-type-new" class="form-control" placeholder="Add a new type">
-                            <button type="button" class="btn btn-outline-primary" id="add-exe-type-btn">
-                                <i class="fa-solid fa-plus me-1"></i>Add type
-                            </button>
-                        </div>
-                        <div class="form-text">Types control the options available when creating new executables.</div>
-                    </div>
-
-                    <div class="col-12">
-                        <div class="form-check form-switch mt-2">
-                            <input class="form-check-input" type="checkbox" role="switch" id="executables_public_downloads" name="executables_public_downloads" {% if current.executables_public_downloads %}checked{% endif %}>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="executables_public_downloads" name="executables_public_downloads"{% if current.executables_public_downloads %} checked{% endif %}>
                             <label class="form-check-label" for="executables_public_downloads">Allow public executable downloads</label>
-                            <div class="form-text">When enabled, executable download links are accessible without signing in.</div>
+                        </div>
+                        <div class="form-text">When enabled, download links remain accessible without authentication.</div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="card border">
+                            <div class="card-body">
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                    <div>
+                                        <h3 class="h5 mb-1">Executable types</h3>
+                                        <p class="muted mb-0">Each type references a Python template and an optional set of flags presented during executable creation.</p>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary" data-add-type>
+                                        <i class="fa-solid fa-plus me-1"></i>Add type
+                                    </button>
+                                </div>
+
+                                <div class="alert alert-light border mt-3 mb-0" role="alert" data-type-empty style="display: none;">
+                                    No executable types defined yet. Use “Add type” to begin.
+                                </div>
+
+                                <div class="d-grid gap-3 mt-3" data-type-list></div>
+
+                                <p class="muted small mt-3 mb-0">Existing templates: {{ current.available_templates|join(', ') if current.available_templates else 'none detected yet' }}.</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="col-12 d-flex flex-column flex-md-row gap-3 mt-2">
-                        <button type="submit" class="btn btn-primary flex-fill">Save settings</button>
-                        <a class="btn btn-outline-secondary flex-fill" href="{{ url_for('dashboard.dashboard') }}">Back to dashboard</a>
+                    <div class="col-12 d-flex justify-content-end gap-2">
+                        <button type="submit" class="btn btn-primary">Save settings</button>
                     </div>
                 </form>
             </div>
 
             {% if admin_context %}
             <div class="tab-pane fade{% if active_tab == 'admins' %} show active{% endif %}" id="tab-admins" role="tabpanel" aria-labelledby="tab-admins-btn">
-                <p class="muted mb-4">Manage administrator accounts, roles, and fine-grained permissions.</p>
-                <div class="card app-card shadow-sm mb-4">
-                    <div class="card-body">
-                        <div class="app-page-head d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-                            <div>
-                                <h3 class="mb-1">Administrators</h3>
-                                <p class="muted mb-0">Review existing accounts, adjust roles, and audit activity.</p>
-                            </div>
-                            <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-add-admin">
-                                    <i class="fa-solid fa-user-plus me-1"></i>Add administrator
-                                </button>
-                                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-update-admin">
-                                    <i class="fa-solid fa-user-pen me-1"></i>Update administrator
-                                </button>
-                            </div>
-                        </div>
-
-                        {% if admin_context.admins %}
-                        <div class="table-responsive mt-3">
-                            <table class="table table-striped align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th scope="col">Username</th>
-                                        <th scope="col">Role</th>
-                                        <th scope="col">Permissions</th>
-                                        <th scope="col">Created</th>
-                                        <th scope="col" class="text-end">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                {% for admin in admin_context.admins %}
-                                    <tr>
-                                        <td>{{ admin.username }}</td>
-                                        <td>{{ admin.role_label }}</td>
-                                        <td>
-                                            {% if admin.permissions_display %}
-                                            <ul class="list-unstyled mb-0">
-                                                {% for perm in admin.permissions_display %}
-                                                <li class="d-flex align-items-center">
-                                                    <i class="fa-solid fa-circle-check text-success me-2 small"></i>
-                                                    <span>{{ perm }}</span>
-                                                </li>
-                                                {% endfor %}
-                                            </ul>
-                                            {% else %}
-                                            <span class="muted">None</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ admin.created_at or 'Unknown' }}</td>
-                                        <td class="text-end">
-                                            <a class="btn btn-sm btn-outline-primary me-1" href="#" data-edit-admin="{{ admin.username }}">
-                                                <i class="fa-solid fa-pen-to-square me-1"></i>Edit
-                                            </a>
-                                            {% if admin_context.can_view_logs %}
-                                            <a class="btn btn-sm btn-outline-secondary me-1" href="{{ url_for('logs.logs_for_user', username=admin.username) }}">
-                                                <i class="fa-solid fa-clipboard-list me-1"></i>Logs
-                                            </a>
-                                            {% endif %}
-                                            <form method="post" action="{{ url_for('settings.manage_admins') }}" class="d-inline" onsubmit="return confirm('Delete admin {{ admin.username }}?');">
-                                                <input type="hidden" name="action" value="delete">
-                                                <input type="hidden" name="username" value="{{ admin.username }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <div class="table-empty mt-3">
-                            <p class="mb-0">No admin accounts found.</p>
-                        </div>
-                        {% endif %}
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                    <div>
+                        <h3 class="h5 mb-1">Administrators</h3>
+                        <p class="muted mb-0">Assign roles and maintain least-privilege access for the control panel.</p>
                     </div>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-add-admin">
+                        <i class="fa-solid fa-user-plus me-1"></i>Add administrator
+                    </button>
                 </div>
 
-                <div class="modal fade" id="modal-add-admin" tabindex="-1" aria-labelledby="modal-add-admin-label" aria-hidden="true">
-                    <div class="modal-dialog modal-lg modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="modal-add-admin-label">Add Administrator</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <form method="post" action="{{ url_for('settings.manage_admins') }}">
-                                <div class="modal-body">
-                                    <input type="hidden" name="action" value="add">
-                                    <div class="row g-3">
-                                        <div class="col-12">
-                                            <label for="username" class="form-label">Username</label>
-                                            <input id="username" name="username" class="form-control" required maxlength="120">
-                                        </div>
-
-                                        <div class="col-12 col-md-6">
-                                            <label for="password" class="form-label">Password</label>
-                                            <input id="password" name="password" type="password" class="form-control" required autocomplete="new-password">
-                                        </div>
-
-                                        <div class="col-12 col-md-6">
-                                            <label for="confirm" class="form-label">Confirm password</label>
-                                            <input id="confirm" name="confirm" type="password" class="form-control" required autocomplete="new-password">
-                                        </div>
-
-                                        <div class="col-12">
-                                            <label for="role" class="form-label">Role</label>
-                                            <select id="role" name="role" class="form-select" data-role-select="add">
-                                                {% for role in admin_context.roles %}
-                                                    <option value="{{ role.name }}" data-description="{{ role.description|e }}">{{ role.label }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <p class="muted mt-2" data-role-description="add"></p>
-                                        </div>
-
-                                        <div class="col-12" data-custom-for="add" style="display: none;">
-                                            <p class="muted mb-2">Select the permissions granted to this custom role.</p>
-                                            <div class="d-grid gap-2">
-                                                {% for perm in admin_context.permissions %}
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="custom_permissions" value="{{ perm.name }}" id="add-perm-{{ perm.name }}">
-                                                    <label class="form-check-label" for="add-perm-{{ perm.name }}">{{ perm.label }}</label>
-                                                </div>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="submit" class="btn btn-primary">Add admin</button>
-                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+                {% if admin_context.admins %}
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">Username</th>
+                                <th scope="col">Role</th>
+                                <th scope="col">Permissions</th>
+                                <th scope="col">Created</th>
+                                <th scope="col" class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for admin in admin_context.admins %}
+                            <tr>
+                                <td>{{ admin.username }}</td>
+                                <td>{{ admin.role_label }}</td>
+                                <td>
+                                    {% if admin.permissions_display %}
+                                        <ul class="list-unstyled mb-0">
+                                            {% for perm in admin.permissions_display %}
+                                            <li class="d-flex align-items-center">
+                                                <i class="fa-solid fa-circle-check text-success me-2 small"></i>
+                                                <span>{{ perm }}</span>
+                                            </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <span class="muted">Inherited</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ admin.created_at or 'Unknown' }}</td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" data-edit-admin="{{ admin.username }}">
+                                        <i class="fa-solid fa-pen-to-square me-1"></i>Edit
+                                    </button>
+                                    {% if admin_context.can_view_logs %}
+                                    <a class="btn btn-sm btn-outline-secondary me-1" href="{{ url_for('logs.logs_for_user', username=admin.username) }}">
+                                        <i class="fa-solid fa-clipboard-list me-1"></i>Logs
+                                    </a>
+                                    {% endif %}
+                                    <form method="post" action="{{ url_for('settings.manage_admins') }}" class="d-inline" onsubmit="return confirm('Delete administrator {{ admin.username }}?');">
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="username" value="{{ admin.username }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fa-solid fa-trash-can me-1"></i>Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-
-                <div class="modal fade" id="modal-update-admin" tabindex="-1" aria-labelledby="modal-update-admin-label" aria-hidden="true">
-                    <div class="modal-dialog modal-lg modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="modal-update-admin-label">Update Administrator</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <form method="post" action="{{ url_for('settings.manage_admins') }}" id="edit-admin-form">
-                                <div class="modal-body">
-                                    <input type="hidden" name="action" value="update">
-                                    <div class="row g-3">
-                                        <div class="col-12">
-                                            <label for="edit_username" class="form-label">Administrator</label>
-                                            <select id="edit_username" name="username" class="form-select" required>
-                                                <option value="" disabled selected>Select an admin account</option>
-                                                {% for admin in admin_context.admins %}
-                                                    <option value="{{ admin.username }}">{{ admin.username }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-
-                                        <div class="col-12">
-                                            <label for="edit_role" class="form-label">Role</label>
-                                            <select id="edit_role" name="role" class="form-select" data-role-select="edit">
-                                                {% for role in admin_context.roles %}
-                                                    <option value="{{ role.name }}" data-description="{{ role.description|e }}">{{ role.label }}</option>
-                                                {% endfor %}
-                                            </select>
-                                            <p class="muted mt-2" data-role-description="edit"></p>
-                                        </div>
-
-                                        <div class="col-12" data-custom-for="edit" style="display: none;">
-                                            <p class="muted mb-2">Select the permissions this admin should retain.</p>
-                                            <div class="d-grid gap-2">
-                                                {% for perm in admin_context.permissions %}
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="custom_permissions" value="{{ perm.name }}" id="edit-perm-{{ perm.name }}">
-                                                    <label class="form-check-label" for="edit-perm-{{ perm.name }}">{{ perm.label }}</label>
-                                                </div>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="submit" class="btn btn-primary">Update admin</button>
-                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+                {% else %}
+                <div class="alert alert-light border" role="alert">
+                    No administrator accounts found.
                 </div>
+                {% endif %}
             </div>
             {% endif %}
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="type-definition-modal" tabindex="-1" aria-labelledby="type-definition-modal-label" aria-hidden="true" data-type-modal>
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="type-definition-modal-label" data-modal-title>Edit executable type</h5>
+                <button type="button" class="btn-close" data-action="cancel-type" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="type-name-input" class="form-label">Name</label>
+                    <input id="type-name-input" type="text" class="form-control" data-modal-field="name" placeholder="Windows x64" required>
+                </div>
+                <div class="row g-3">
+                    <div class="col-12 col-lg-6">
+                        <label for="type-template-select" class="form-label">Existing template</label>
+                        <select id="type-template-select" class="form-select" data-modal-field="template"></select>
+                        <div class="form-text">Select a Python template already present in the templates directory.</div>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <label class="form-label">Upload new template</label>
+                        <div class="border rounded p-3" data-upload-placeholder>
+                            <p class="muted mb-0">Upload a <code>.py</code> file to override the existing template.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label for="type-options-textarea" class="form-label">Options (one per line)</label>
+                    <textarea id="type-options-textarea" class="form-control" rows="4" placeholder="Notify user
+Require elevation" data-modal-field="options"></textarea>
+                    <div class="form-text">Options render as checkboxes when generating an executable.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-action="save-type">Save entry</button>
+                <button type="button" class="btn btn-outline-secondary" data-action="cancel-type">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if admin_context %}
+<div class="modal fade" id="modal-add-admin" tabindex="-1" aria-labelledby="modal-add-admin-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="{{ url_for('settings.manage_admins') }}" class="needs-validation" novalidate>
+                <input type="hidden" name="action" value="add">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modal-add-admin-label">Add administrator</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label for="username" class="form-label">Username</label>
+                            <input id="username" name="username" class="form-control" required maxlength="120">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="role" class="form-label">Role</label>
+                            <select id="role" name="role" class="form-select" data-role-select="add">
+                                {% for role in admin_context.roles %}
+                                    <option value="{{ role.name }}" data-description="{{ role.description|e }}">{{ role.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <p class="muted mt-2 mb-0" data-role-description="add"></p>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="password" class="form-label">Password</label>
+                            <input id="password" name="password" type="password" class="form-control" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label for="confirm" class="form-label">Confirm password</label>
+                            <input id="confirm" name="confirm" type="password" class="form-control" required>
+                        </div>
+                        <div class="col-12" data-custom-for="add" style="display: none;">
+                            <p class="muted mb-2">Select permissions granted to this custom role.</p>
+                            <div class="d-grid gap-2">
+                                {% for perm in admin_context.permissions %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="custom_permissions" value="{{ perm.name }}" id="add-perm-{{ perm.name }}">
+                                    <label class="form-check-label" for="add-perm-{{ perm.name }}">{{ perm.label }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Add administrator</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modal-update-admin" tabindex="-1" aria-labelledby="modal-update-admin-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="{{ url_for('settings.manage_admins') }}" class="needs-validation" novalidate>
+                <input type="hidden" name="action" value="update">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modal-update-admin-label">Update administrator</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label for="edit_username" class="form-label">Administrator</label>
+                            <select id="edit_username" name="username" class="form-select" required>
+                                <option value="" disabled selected>Select an admin account</option>
+                                {% for admin in admin_context.admins %}
+                                    <option value="{{ admin.username }}">{{ admin.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="edit_role" class="form-label">Role</label>
+                            <select id="edit_role" name="role" class="form-select" data-role-select="edit">
+                                {% for role in admin_context.roles %}
+                                    <option value="{{ role.name }}" data-description="{{ role.description|e }}">{{ role.label }}</option>
+                                {% endfor %}
+                            </select>
+                            <p class="muted mt-2 mb-0" data-role-description="edit"></p>
+                        </div>
+                        <div class="col-12" data-custom-for="edit" style="display: none;">
+                            <p class="muted mb-2">Select the permissions this administrator should retain.</p>
+                            <div class="d-grid gap-2">
+                                {% for perm in admin_context.permissions %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="custom_permissions" value="{{ perm.name }}" id="edit-perm-{{ perm.name }}">
+                                    <label class="form-check-label" for="edit-perm-{{ perm.name }}">{{ perm.label }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Update administrator</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
 (function () {
-    const wrapper = document.getElementById('exe-types-wrapper');
-    const emptyState = document.getElementById('exe-types-empty');
-    const addButton = document.getElementById('add-exe-type-btn');
-    const newTypeInput = document.getElementById('exe-type-new');
+    const definitionsRaw = {{ current.type_definitions|tojson }};
+    const templatesRaw = {{ current.available_templates|tojson }};
+    const definitions = Array.isArray(definitionsRaw) ? definitionsRaw : [];
+    const templates = Array.isArray(templatesRaw) ? templatesRaw : [];
 
-    if (!wrapper || !addButton || !newTypeInput) {
+    const container = document.querySelector('[data-type-list]');
+    const emptyState = document.querySelector('[data-type-empty]');
+    const addButton = document.querySelector('[data-add-type]');
+    const modalEl = document.querySelector('[data-type-modal]');
+
+    if (!container || !emptyState || !addButton || !modalEl) {
         return;
     }
 
-    const updateEmptyState = function () {
-        if (!emptyState) {
-            return;
+    const bootstrapRef = window.bootstrap;
+    if (!bootstrapRef || !bootstrapRef.Modal) {
+        console.warn('Bootstrap modal support is required for executable type editing.');
+        return;
+    }
+
+    const modal = bootstrapRef.Modal.getOrCreateInstance(modalEl);
+    const modalTitle = modalEl.querySelector('[data-modal-title]');
+    const nameInput = modalEl.querySelector('[data-modal-field="name"]');
+    const templateSelect = modalEl.querySelector('[data-modal-field="template"]');
+    const optionsTextarea = modalEl.querySelector('[data-modal-field="options"]');
+    const uploadPlaceholder = modalEl.querySelector('[data-upload-placeholder]');
+    const saveButton = modalEl.querySelector('[data-action="save-type"]');
+    const cancelButtons = Array.from(modalEl.querySelectorAll('[data-action="cancel-type"]'));
+
+    let counter = definitions.length;
+    let activeEntry = null;
+    let activeIndex = null;
+    let activeFileInput = null;
+    let mode = 'add';
+
+    const normalizeOptionsValue = function (raw) {
+        if (!raw) {
+            return '';
         }
-        const hasItems = wrapper.querySelector('[data-exe-type-item]') !== null;
-        emptyState.style.display = hasItems ? 'none' : 'block';
+        return raw
+            .split(/\r?\n/)
+            .map(function (item) {
+                return item.trim();
+            })
+            .filter(Boolean)
+            .join('\n');
     };
 
-    const hasType = function (value) {
-        const normalized = value.trim().toLowerCase();
-        return Array.from(wrapper.querySelectorAll('[data-exe-type-item]')).some(function (item) {
-            return (item.getAttribute('data-value') || '').toLowerCase() === normalized;
+    const updateEmptyState = function () {
+        const hasEntries = container.querySelector('[data-type-entry]') !== null;
+        emptyState.style.display = hasEntries ? 'none' : 'block';
+    };
+
+    const createHiddenInput = function (field, name, value) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value || '';
+        input.dataset.field = field;
+        return input;
+    };
+
+    const createFileInput = function (index) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.py';
+        input.name = 'type_template_upload_' + index;
+        input.className = 'form-control d-none';
+        input.dataset.field = 'upload';
+        return input;
+    };
+
+    const populateTemplateSelect = function (selectedValue) {
+        templateSelect.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Select existing template...';
+        templateSelect.appendChild(placeholder);
+
+        let hasSelected = false;
+        templates.forEach(function (name) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            if (name === selectedValue) {
+                option.selected = true;
+                hasSelected = true;
+            }
+            templateSelect.appendChild(option);
+        });
+
+        if (selectedValue && !hasSelected) {
+            const fallback = document.createElement('option');
+            fallback.value = selectedValue;
+            fallback.textContent = selectedValue + ' (missing)';
+            fallback.selected = true;
+            templateSelect.appendChild(fallback);
+        }
+    };
+
+    const updateSummary = function (entry) {
+        const nameField = entry.querySelector('[data-field="name"]');
+        const templateCurrentField = entry.querySelector('[data-field="template-current"]');
+        const templateExistingField = entry.querySelector('[data-field="template-existing"]');
+        const optionsField = entry.querySelector('[data-field="options"]');
+        const fileInput = entry.querySelector('[data-field="upload"]');
+
+        const summaryName = entry.querySelector('[data-type-summary="name"]');
+        const summaryTemplate = entry.querySelector('[data-type-summary="template"]');
+        const summaryOptions = entry.querySelector('[data-type-summary="options"]');
+
+        const nameValue = (nameField.value || '').trim() || 'Unnamed executable';
+        summaryName.textContent = nameValue;
+
+        let templateLabel = (templateExistingField.value || '').trim();
+        const storedTemplate = (templateCurrentField.value || '').trim();
+
+        if (!templateLabel) {
+            templateLabel = storedTemplate;
+        }
+
+        if (!templateLabel && fileInput && fileInput.files && fileInput.files.length) {
+            templateLabel = fileInput.files[0].name + ' (upload)';
+        }
+
+        if (!templateLabel) {
+            templateLabel = 'Pending selection';
+        } else if (!templateLabel.endsWith(' (upload)') && !templates.includes(templateLabel)) {
+            templateLabel += ' (missing)';
+        }
+
+        summaryTemplate.textContent = templateLabel;
+
+        const labels = normalizeOptionsValue(optionsField.value)
+            .split('\n')
+            .filter(Boolean);
+        summaryOptions.textContent = labels.length ? labels.join(', ') : 'None';
+    };
+
+    const syncHiddenFields = function (entry, payload) {
+        const nameField = entry.querySelector('[data-field="name"]');
+        const templateCurrentField = entry.querySelector('[data-field="template-current"]');
+        const templateExistingField = entry.querySelector('[data-field="template-existing"]');
+        const optionsField = entry.querySelector('[data-field="options"]');
+
+        if (payload.name !== undefined) {
+            nameField.value = payload.name;
+            entry.dataset.name = payload.name.trim().toLowerCase();
+        }
+
+        if (payload.template !== undefined) {
+            const previous = templateCurrentField.value;
+            if (payload.template) {
+                templateExistingField.value = payload.template;
+                templateCurrentField.value = payload.template;
+            } else {
+                templateExistingField.value = '';
+                templateCurrentField.value = previous || '';
+            }
+        }
+
+        if (payload.optionsValue !== undefined) {
+            optionsField.value = payload.optionsValue;
+        }
+    };
+
+    const createEntry = function (payload, index) {
+        const entry = document.createElement('div');
+        entry.className = 'card border';
+        entry.dataset.typeEntry = 'true';
+        entry.dataset.index = index;
+
+        entry.appendChild(createHiddenInput('index', 'type_index[]', index));
+        entry.appendChild(createHiddenInput('name', 'type_name_' + index, payload.name || ''));
+        entry.appendChild(createHiddenInput('template-current', 'type_template_current_' + index, payload.template || ''));
+        entry.appendChild(createHiddenInput('template-existing', 'type_template_existing_' + index, payload.template || ''));
+        entry.appendChild(createHiddenInput('options', 'type_options_' + index, payload.optionsValue || ''));
+
+        const body = document.createElement('div');
+        body.className = 'card-body';
+        body.innerHTML = [
+            '<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">',
+            '  <div class="w-100">',
+            '    <h5 class="mb-1" data-type-summary="name"></h5>',
+            '    <p class="mb-1 small"><span class="fw-semibold">Template:</span> <span data-type-summary="template"></span></p>',
+            '    <p class="mb-0 small"><span class="fw-semibold">Options:</span> <span data-type-summary="options"></span></p>',
+            '  </div>',
+            '  <div class="d-flex flex-md-column flex-wrap gap-2">',
+            '    <button type="button" class="btn btn-sm btn-outline-primary" data-action="edit"><i class="fa-solid fa-pen-to-square me-1"></i>Edit</button>',
+            '    <button type="button" class="btn btn-sm btn-outline-danger" data-action="remove"><i class="fa-solid fa-xmark me-1"></i>Remove</button>',
+            '  </div>',
+            '</div>'
+        ].join('');
+
+        const fileInput = createFileInput(index);
+        entry.appendChild(fileInput);
+        entry.appendChild(body);
+        container.appendChild(entry);
+
+        entry.dataset.name = (payload.name || '').trim().toLowerCase();
+        updateSummary(entry);
+        updateEmptyState();
+        return entry;
+    };
+
+    const resetModal = function () {
+        nameInput.value = '';
+        templateSelect.innerHTML = '';
+        optionsTextarea.value = '';
+        uploadPlaceholder.innerHTML = '<p class="muted mb-0">Upload a <code>.py</code> file to override the existing template.</p>';
+    };
+
+    const openModal = function (entry) {
+        mode = entry ? 'edit' : 'add';
+
+        if (entry) {
+            activeEntry = entry;
+            activeIndex = entry.dataset.index;
+            modalTitle.textContent = 'Edit executable type';
+
+            const nameValue = entry.querySelector('[data-field="name"]').value;
+            const currentTemplate = entry.querySelector('[data-field="template-current"]').value;
+            const existingTemplate = entry.querySelector('[data-field="template-existing"]').value || currentTemplate;
+            const optionsValue = entry.querySelector('[data-field="options"]').value;
+
+            nameInput.value = nameValue;
+            optionsTextarea.value = optionsValue;
+            populateTemplateSelect(existingTemplate);
+
+            uploadPlaceholder.innerHTML = '';
+            activeFileInput = entry.querySelector('[data-field="upload"]');
+            if (activeFileInput) {
+                activeFileInput.classList.remove('d-none');
+                uploadPlaceholder.appendChild(activeFileInput);
+            }
+        } else {
+            activeEntry = null;
+            activeIndex = String(counter++);
+            modalTitle.textContent = 'Add executable type';
+
+            nameInput.value = '';
+            optionsTextarea.value = '';
+            populateTemplateSelect('');
+
+            uploadPlaceholder.innerHTML = '';
+            activeFileInput = createFileInput(activeIndex);
+            activeFileInput.classList.remove('d-none');
+            uploadPlaceholder.appendChild(activeFileInput);
+        }
+
+        modal.show();
+    };
+
+    const hasDuplicateName = function (name, excludeEntry) {
+        const normalized = name.trim().toLowerCase();
+        if (!normalized) {
+            return false;
+        }
+        return Array.from(container.querySelectorAll('[data-type-entry]')).some(function (entry) {
+            if (entry === excludeEntry) {
+                return false;
+            }
+            const existing = (entry.querySelector('[data-field="name"]').value || '').trim().toLowerCase();
+            return existing === normalized;
         });
     };
 
-    const createTypeChip = function (value) {
-        const normalized = value.trim();
-        if (!normalized || hasType(normalized)) {
+    const handleSave = function () {
+        const name = nameInput.value.trim();
+        if (!name) {
+            window.alert('Executable type name is required.');
             return;
         }
 
-        const container = document.createElement('div');
-        container.className = 'd-flex align-items-center gap-2 border rounded px-3 py-2';
-        container.setAttribute('data-exe-type-item', 'true');
-        container.setAttribute('data-value', normalized.toLowerCase());
+        if (hasDuplicateName(name, activeEntry)) {
+            window.alert('Executable type names must be unique.');
+            return;
+        }
 
-        const hidden = document.createElement('input');
-        hidden.type = 'hidden';
-        hidden.name = 'exe_types[]';
-        hidden.value = normalized;
+        const selectedTemplate = templateSelect.value.trim();
+        const optionsValue = normalizeOptionsValue(optionsTextarea.value);
+        const hasUpload = activeFileInput && activeFileInput.files && activeFileInput.files.length > 0;
+        const existingCurrent =
+            mode === 'edit' && activeEntry
+                ? (activeEntry.querySelector('[data-field="template-current"]').value || '').trim()
+                : '';
 
-        const label = document.createElement('span');
-        label.className = 'flex-grow-1';
-        label.textContent = normalized;
+        if (!selectedTemplate && !hasUpload && !existingCurrent) {
+            window.alert('Select an existing template or upload a new one.');
+            return;
+        }
 
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'btn btn-sm btn-outline-danger';
-        removeBtn.setAttribute('data-remove-exe-type', 'true');
-        removeBtn.innerHTML = '<i class="fa-solid fa-xmark me-1"></i>Remove';
+        const payload = {
+            name: name,
+            template: selectedTemplate,
+            optionsValue: optionsValue,
+        };
 
-        container.appendChild(hidden);
-        container.appendChild(label);
-        container.appendChild(removeBtn);
-        wrapper.appendChild(container);
-        updateEmptyState();
+        if (mode === 'add') {
+            const entry = createEntry(payload, activeIndex);
+            syncHiddenFields(entry, payload);
+            const placeholderInput = entry.querySelector('[data-field="upload"]');
+            if (placeholderInput && placeholderInput !== activeFileInput) {
+                placeholderInput.remove();
+            }
+            if (activeFileInput) {
+                activeFileInput.classList.add('d-none');
+                entry.appendChild(activeFileInput);
+            }
+            updateSummary(entry);
+        } else if (activeEntry) {
+            syncHiddenFields(activeEntry, payload);
+            if (activeFileInput) {
+                activeFileInput.classList.add('d-none');
+                activeEntry.appendChild(activeFileInput);
+            }
+            updateSummary(activeEntry);
+        }
+
+        activeEntry = null;
+        activeIndex = null;
+        activeFileInput = null;
+        mode = 'add';
+        modal.hide();
     };
 
-    const addTypeFromInput = function () {
-        const value = newTypeInput.value || '';
-        createTypeChip(value);
-        newTypeInput.value = '';
-        newTypeInput.focus();
+    const handleCancel = function () {
+        modal.hide();
     };
 
     addButton.addEventListener('click', function () {
-        addTypeFromInput();
+        openModal(null);
     });
 
-    newTypeInput.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            addTypeFromInput();
-        }
-    });
-
-    wrapper.addEventListener('click', function (event) {
-        const target = event.target.closest('[data-remove-exe-type]');
+    container.addEventListener('click', function (event) {
+        const target = event.target.closest('[data-action]');
         if (!target) {
             return;
         }
-        const chip = target.closest('[data-exe-type-item]');
-        if (chip) {
-            chip.remove();
-            updateEmptyState();
+        const entry = target.closest('[data-type-entry]');
+        if (!entry) {
+            return;
+        }
+        const action = target.getAttribute('data-action');
+        if (action === 'edit') {
+            openModal(entry);
+        } else if (action === 'remove') {
+            const nameValue = (entry.querySelector('[data-field="name"]').value || 'this type').trim() || 'this type';
+            if (window.confirm('Remove executable type "' + nameValue + '"?')) {
+                const fileInput = entry.querySelector('[data-field="upload"]');
+                if (fileInput) {
+                    fileInput.remove();
+                }
+                entry.remove();
+                updateEmptyState();
+            }
         }
     });
 
+    saveButton.addEventListener('click', handleSave);
+    cancelButtons.forEach(function (button) {
+        button.addEventListener('click', handleCancel);
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function () {
+        if (activeFileInput) {
+            if (mode === 'edit' && activeEntry) {
+                activeFileInput.classList.add('d-none');
+                activeEntry.appendChild(activeFileInput);
+            } else {
+                activeFileInput.remove();
+            }
+        }
+        activeEntry = null;
+        activeIndex = null;
+        activeFileInput = null;
+        mode = 'add';
+        resetModal();
+    });
+
+    definitions.forEach(function (definition, idx) {
+        const payload = {
+            name: definition && definition.name ? definition.name : '',
+            template: definition && definition.template ? definition.template : '',
+            optionsValue: Array.isArray(definition && definition.options)
+                ? definition.options
+                      .map(function (opt) {
+                          return opt && opt.label ? opt.label : '';
+                      })
+                      .filter(Boolean)
+                      .join('\n')
+                : '',
+        };
+        const entry = createEntry(payload, idx);
+        syncHiddenFields(entry, payload);
+        updateSummary(entry);
+    });
+
+    counter = Math.max(counter, definitions.length);
     updateEmptyState();
 })();
 </script>
@@ -394,14 +739,18 @@
     function applyRoleDescription(select) {
         const target = select.getAttribute('data-role-select');
         const descriptionEl = document.querySelector('[data-role-description="' + target + '"]');
-        if (!descriptionEl) return;
+        if (!descriptionEl) {
+            return;
+        }
         descriptionEl.textContent = roleDescriptionMap[select.value] || '';
     }
 
     function toggleCustomPermissions(select, preset) {
         const target = select.getAttribute('data-role-select');
         const container = document.querySelector('[data-custom-for="' + target + '"]');
-        if (!container) return;
+        if (!container) {
+            return;
+        }
 
         const isCustom = select.value === 'custom';
         container.style.display = isCustom ? 'block' : 'none';

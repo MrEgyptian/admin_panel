@@ -1,7 +1,9 @@
 import configparser
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
 from flask import (
     Blueprint,
@@ -14,9 +16,17 @@ from flask import (
     url_for,
 )
 from werkzeug.security import generate_password_hash
+from werkzeug.utils import secure_filename
 
 from routes.decorators import login_required, require_permission
 from utils.database import load_admins, save_admins
+from utils.exe import load_executables
+from utils.exe_types import (
+    build_options_from_labels,
+    load_type_definitions,
+    parse_option_string,
+    save_type_definitions,
+)
 from utils.roles import (
     AVAILABLE_PERMISSIONS,
     ROLE_DEFINITIONS,
@@ -43,6 +53,69 @@ def _write_config(parser: configparser.ConfigParser) -> None:
     config_file: Path = current_app.config["CONFIG_FILE"]
     with config_file.open("w", encoding="utf-8") as handle:
         parser.write(handle)
+
+
+def _type_definitions() -> List[Dict[str, Any]]:
+    definitions = current_app.config.get("EXE_TYPE_DEFS")
+    if definitions is None:
+        definitions = load_type_definitions(current_app.config["EXE_TYPE_DEFS_FILE"], current_app.config.get("EXE_TYPES", []))
+        current_app.config["EXE_TYPE_DEFS"] = definitions
+    # return a deep-ish copy to avoid mutating config directly
+    result: List[Dict[str, Any]] = []
+    for item in definitions:
+        entry = {
+            "name": item.get("name", ""),
+            "template": item.get("template", ""),
+            "options": [
+                {
+                    "key": option.get("key", ""),
+                    "label": option.get("label", ""),
+                }
+                for option in item.get("options", [])
+                if isinstance(option, dict)
+            ],
+        }
+        result.append(entry)
+    return result
+
+
+def _persist_type_definitions(definitions: List[Dict[str, Any]]) -> None:
+    save_type_definitions(current_app.config["EXE_TYPE_DEFS_FILE"], definitions)
+    current_app.config["EXE_TYPE_DEFS"] = definitions
+    current_app.config["EXE_TYPES"] = [item.get("name") for item in definitions]
+
+
+def _available_templates() -> List[str]:
+    template_dir = Path(current_app.config["EXE_TEMPLATE_DIR"])
+    template_dir.mkdir(parents=True, exist_ok=True)
+    templates = sorted({path.name for path in template_dir.glob("*.py") if path.is_file()})
+    return templates
+
+
+def _slugify(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return slug or "template"
+
+
+def _save_uploaded_template(file_storage, type_name: str) -> Optional[str]:
+    if not file_storage or not file_storage.filename:
+        return None
+
+    filename = secure_filename(file_storage.filename)
+    if not filename.lower().endswith(".py"):
+        return None
+
+    template_dir = Path(current_app.config["EXE_TEMPLATE_DIR"])
+    template_dir.mkdir(parents=True, exist_ok=True)
+
+    unique_name = f"{_slugify(type_name)}-{uuid4().hex[:8]}.py"
+    target_path = template_dir / unique_name
+    file_storage.save(target_path)
+    return unique_name
+
+
+def _redirect_app_tab():
+    return redirect(url_for("settings.settings_index", tab="app"))
 
 
 def _admin_management_context(admins: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -81,34 +154,89 @@ def _admin_management_context(admins: List[Dict[str, Any]]) -> Dict[str, Any]:
 def settings_index():
     parser = _config_parser()
     requested_tab = request.args.get("tab") or request.form.get("active_tab") or "app"
+    existing_definitions = _type_definitions()
 
     if request.method == "POST":
         secret_key = request.form.get("secret_key", "").strip()
         same_site = request.form.get("session_cookie_samesite", "Lax").strip()
         http_only = request.form.get("session_cookie_http_only") == "on"
-        exe_types_raw = request.form.getlist("exe_types[]")
         downloads_public = request.form.get("executables_public_downloads") == "on"
+        type_indexes = request.form.getlist("type_index[]")
 
         if not secret_key:
             flash("Secret key cannot be empty.", "error")
-            return redirect(url_for("settings.settings_index"))
+            return _redirect_app_tab()
 
         allowed_same_site = {"Lax", "Strict", "None"}
         if same_site not in allowed_same_site:
             flash("Invalid SameSite value selected.", "error")
-            return redirect(url_for("settings.settings_index"))
+            return _redirect_app_tab()
 
-        exe_types: List[str] = []
-        seen_types = set()
-        for raw in exe_types_raw:
-            cleaned = raw.strip()
-            if not cleaned or cleaned.lower() in seen_types:
-                continue
-            exe_types.append(cleaned)
-            seen_types.add(cleaned.lower())
-        if not exe_types:
+        if not type_indexes:
+            flash("Define at least one executable type.", "error")
+            return _redirect_app_tab()
+
+        existing_map = {item.get("name", "").lower(): item for item in existing_definitions}
+        template_dir = Path(current_app.config["EXE_TEMPLATE_DIR"])
+        type_definitions: List[Dict[str, Any]] = []
+        seen_names: set[str] = set()
+
+        for index in type_indexes:
+            name = request.form.get(f"type_name_{index}", "").strip()
+            if not name:
+                flash("Each executable type requires a name.", "error")
+                return _redirect_app_tab()
+
+            lowered = name.lower()
+            if lowered in seen_names:
+                flash("Executable type names must be unique.", "error")
+                return _redirect_app_tab()
+
+            current_template = request.form.get(f"type_template_current_{index}", "").strip()
+            selected_template = request.form.get(f"type_template_existing_{index}", "").strip()
+            upload_field = f"type_template_upload_{index}"
+            uploaded_file = request.files.get(upload_field)
+
+            if uploaded_file and uploaded_file.filename and not uploaded_file.filename.lower().endswith(".py"):
+                flash("Template uploads must be Python files.", "error")
+                return _redirect_app_tab()
+
+            saved_template = _save_uploaded_template(uploaded_file, name) if uploaded_file and uploaded_file.filename else None
+            template_name = saved_template or selected_template or current_template
+            if template_name:
+                template_name = Path(template_name).name
+            if not template_name:
+                flash("Each executable type must reference a template.", "error")
+                return _redirect_app_tab()
+
+            if not saved_template:
+                candidate_path = template_dir / template_name
+                if not candidate_path.exists():
+                    flash(f"Template '{template_name}' does not exist. Upload it or select another template.", "error")
+                    return _redirect_app_tab()
+
+            options_raw = request.form.get(f"type_options_{index}", "")
+            option_labels = parse_option_string(options_raw)
+            existing_options = []
+            if lowered in existing_map:
+                existing_entry = existing_map[lowered]
+                existing_options = existing_entry.get("options", []) if isinstance(existing_entry, dict) else []
+            options = build_options_from_labels(option_labels, existing_options)
+
+            type_definitions.append(
+                {
+                    "name": name,
+                    "template": template_name,
+                    "options": options,
+                }
+            )
+            seen_names.add(lowered)
+
+        if not type_definitions:
             flash("Executable types cannot be empty.", "error")
-            return redirect(url_for("settings.settings_index"))
+            return _redirect_app_tab()
+
+        exe_types = [item["name"] for item in type_definitions]
 
         parser.set("flask", "secret_key", secret_key)
         parser.set("flask", "session_cookie_http_only", "true" if http_only else "false")
@@ -117,24 +245,26 @@ def settings_index():
         parser.set("executables", "public_downloads", "true" if downloads_public else "false")
 
         _write_config(parser)
+        _persist_type_definitions(type_definitions)
 
         current_app.config.update(
             SECRET_KEY=secret_key,
             SESSION_COOKIE_HTTPONLY=http_only,
             SESSION_COOKIE_SAMESITE=same_site,
-            EXE_TYPES=exe_types,
             EXECUTABLE_DOWNLOADS_PUBLIC=downloads_public,
         )
 
         flash("Settings saved successfully.", "success")
-        return redirect(url_for("settings.settings_index", tab="app"))
+        return _redirect_app_tab()
 
     current_values = {
         "secret_key": current_app.config["SECRET_KEY"],
         "session_cookie_http_only": current_app.config.get("SESSION_COOKIE_HTTPONLY", True),
         "session_cookie_samesite": current_app.config.get("SESSION_COOKIE_SAMESITE", "Lax"),
         "exe_types": ", ".join(current_app.config.get("EXE_TYPES", [])),
-        "exe_types_list": current_app.config.get("EXE_TYPES", []),
+        "exe_types_list": [item.get("name", "") for item in existing_definitions],
+        "type_definitions": existing_definitions,
+        "available_templates": _available_templates(),
         "executables_public_downloads": current_app.config.get("EXECUTABLE_DOWNLOADS_PUBLIC", False),
     }
 
