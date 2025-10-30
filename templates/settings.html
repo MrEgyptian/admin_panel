@@ -46,8 +46,26 @@
                     </div>
 
                     <div class="col-12">
-                        <label for="exe_types" class="form-label">Executable types (comma separated)</label>
-                        <input id="exe_types" name="exe_types" class="form-control" value="{{ current.exe_types }}" placeholder="standard, elevated, portable">
+                        <label class="form-label">Executable types</label>
+                        <div id="exe-types-wrapper" class="d-flex flex-column gap-2 mb-2">
+                            {% for exe_type in current.exe_types_list %}
+                            <div class="d-flex align-items-center gap-2 border rounded px-3 py-2" data-exe-type-item="true" data-value="{{ exe_type|lower }}">
+                                <input type="hidden" name="exe_types[]" value="{{ exe_type }}">
+                                <span class="flex-grow-1">{{ exe_type }}</span>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-remove-exe-type="true">
+                                    <i class="fa-solid fa-xmark me-1"></i>Remove
+                                </button>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <p id="exe-types-empty" class="muted mb-2"{% if current.exe_types_list %} style="display: none;"{% endif %}>No executable types defined yet.</p>
+                        <div class="input-group">
+                            <input id="exe-type-new" class="form-control" placeholder="Add a new type">
+                            <button type="button" class="btn btn-outline-primary" id="add-exe-type-btn">
+                                <i class="fa-solid fa-plus me-1"></i>Add type
+                            </button>
+                        </div>
+                        <div class="form-text">Types control the options available when creating new executables.</div>
                     </div>
 
                     <div class="col-12">
@@ -263,6 +281,98 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+(function () {
+    const wrapper = document.getElementById('exe-types-wrapper');
+    const emptyState = document.getElementById('exe-types-empty');
+    const addButton = document.getElementById('add-exe-type-btn');
+    const newTypeInput = document.getElementById('exe-type-new');
+
+    if (!wrapper || !addButton || !newTypeInput) {
+        return;
+    }
+
+    const updateEmptyState = function () {
+        if (!emptyState) {
+            return;
+        }
+        const hasItems = wrapper.querySelector('[data-exe-type-item]') !== null;
+        emptyState.style.display = hasItems ? 'none' : 'block';
+    };
+
+    const hasType = function (value) {
+        const normalized = value.trim().toLowerCase();
+        return Array.from(wrapper.querySelectorAll('[data-exe-type-item]')).some(function (item) {
+            return (item.getAttribute('data-value') || '').toLowerCase() === normalized;
+        });
+    };
+
+    const createTypeChip = function (value) {
+        const normalized = value.trim();
+        if (!normalized || hasType(normalized)) {
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'd-flex align-items-center gap-2 border rounded px-3 py-2';
+        container.setAttribute('data-exe-type-item', 'true');
+        container.setAttribute('data-value', normalized.toLowerCase());
+
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'exe_types[]';
+        hidden.value = normalized;
+
+        const label = document.createElement('span');
+        label.className = 'flex-grow-1';
+        label.textContent = normalized;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn btn-sm btn-outline-danger';
+        removeBtn.setAttribute('data-remove-exe-type', 'true');
+        removeBtn.innerHTML = '<i class="fa-solid fa-xmark me-1"></i>Remove';
+
+        container.appendChild(hidden);
+        container.appendChild(label);
+        container.appendChild(removeBtn);
+        wrapper.appendChild(container);
+        updateEmptyState();
+    };
+
+    const addTypeFromInput = function () {
+        const value = newTypeInput.value || '';
+        createTypeChip(value);
+        newTypeInput.value = '';
+        newTypeInput.focus();
+    };
+
+    addButton.addEventListener('click', function () {
+        addTypeFromInput();
+    });
+
+    newTypeInput.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            addTypeFromInput();
+        }
+    });
+
+    wrapper.addEventListener('click', function (event) {
+        const target = event.target.closest('[data-remove-exe-type]');
+        if (!target) {
+            return;
+        }
+        const chip = target.closest('[data-exe-type-item]');
+        if (chip) {
+            chip.remove();
+            updateEmptyState();
+        }
+    });
+
+    updateEmptyState();
+})();
+</script>
 {% if admin_context %}
 <script>
 (function () {

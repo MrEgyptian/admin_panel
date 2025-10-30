@@ -86,7 +86,7 @@ def settings_index():
         secret_key = request.form.get("secret_key", "").strip()
         same_site = request.form.get("session_cookie_samesite", "Lax").strip()
         http_only = request.form.get("session_cookie_http_only") == "on"
-        exe_types_raw = request.form.get("exe_types", "").strip()
+        exe_types_raw = request.form.getlist("exe_types[]")
         downloads_public = request.form.get("executables_public_downloads") == "on"
 
         if not secret_key:
@@ -98,7 +98,14 @@ def settings_index():
             flash("Invalid SameSite value selected.", "error")
             return redirect(url_for("settings.settings_index"))
 
-        exe_types: List[str] = [item.strip() for item in exe_types_raw.split(",") if item.strip()]
+        exe_types: List[str] = []
+        seen_types = set()
+        for raw in exe_types_raw:
+            cleaned = raw.strip()
+            if not cleaned or cleaned.lower() in seen_types:
+                continue
+            exe_types.append(cleaned)
+            seen_types.add(cleaned.lower())
         if not exe_types:
             flash("Executable types cannot be empty.", "error")
             return redirect(url_for("settings.settings_index"))
@@ -127,6 +134,7 @@ def settings_index():
         "session_cookie_http_only": current_app.config.get("SESSION_COOKIE_HTTPONLY", True),
         "session_cookie_samesite": current_app.config.get("SESSION_COOKIE_SAMESITE", "Lax"),
         "exe_types": ", ".join(current_app.config.get("EXE_TYPES", [])),
+        "exe_types_list": current_app.config.get("EXE_TYPES", []),
         "executables_public_downloads": current_app.config.get("EXECUTABLE_DOWNLOADS_PUBLIC", False),
     }
 
