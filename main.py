@@ -24,6 +24,9 @@ for directory in (DATA_DIR, FILES_DIR, TEMPLATE_DIR):
 
 config = configparser.ConfigParser()
 config.read(CONFIG_FILE, encoding="utf-8")
+for section in ("flask", "admin", "executables", "api"):
+    if not config.has_section(section):
+        config.add_section(section)
 
 secret_key = os.getenv(
     "FLASK_SECRET_KEY",
@@ -41,6 +44,13 @@ exe_types = [item.strip() for item in exe_types_raw.split(",") if item.strip()] 
     "elevated",
     "portable",
 ]
+
+api_base_url = os.getenv(
+    "API_BASE_URL",
+    config.get("api", "host", fallback=""),
+).strip()
+if api_base_url:
+    api_base_url = api_base_url.rstrip("/")
 
 type_definitions = load_type_definitions(TYPE_DEFS_FILE, exe_types)
 if not type_definitions:
@@ -80,6 +90,7 @@ app.config.update(
     EXE_TYPES=exe_types,
     EXE_TYPE_DEFS=type_definitions,
     EXECUTABLE_DOWNLOADS_PUBLIC=executables_public_downloads,
+    API_BASE_URL=api_base_url,
 )
 
 
@@ -94,4 +105,8 @@ ensure_admin_store(
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    os.environ["WATCHFILES_IGNORE_PATHS"] = (
+    "site-packages,PyInstaller,anaconda3,Lib,AppData"
+)
+    os.environ["WATCHFILES_FORCE_POLLING"] = "true"  # optional, stabilizes watcher on Windows
+    app.run(debug=True, use_reloader=True, reloader_type='stat')

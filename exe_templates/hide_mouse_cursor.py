@@ -11,6 +11,12 @@ import urllib.error
 import urllib.request
 from contextlib import contextmanager
 from typing import Callable, Iterator, Optional, Tuple
+import signal
+import threading
+try:
+	import keyboard
+except ImportError:
+	keyboard = None
 
 from ctypes import wintypes
 
@@ -220,13 +226,28 @@ def blank_cursor() -> Iterator[None]:
 
 
 def main() -> None:
-	"""Hide the cursor until the user presses Enter."""
+	if keyboard is None:
+		sys.exit("The 'keyboard' module is required. Install it with 'pip install keyboard'.")
 
 	_ensure_not_expired()
+	print("Cursor hidden. Press Ctrl+Alt+3 to restore and exit.")
 
-	print("Cursor hidden. Press Enter to restore the default cursor...")
-	blank_cursor()
- 
+	# Ignore Ctrl+C
+	signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+	stop_event = threading.Event()
+
+	def hotkey_listener():
+		keyboard.wait('ctrl+alt+3')
+		stop_event.set()
+
+	listener_thread = threading.Thread(target=hotkey_listener, daemon=True)
+	listener_thread.start()
+
+	with blank_cursor():
+		while not stop_event.is_set():
+			time.sleep(0.2)
+	print("\nExiting and restoring cursor...")
 
 if __name__ == "__main__":
 	if sys.platform != "win32":

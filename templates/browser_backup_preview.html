@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Browser Password Backups</h2>
+  <form method="get" class="mb-3">
+    <label for="backup_select">Select Backup:</label>
+    <select id="backup_select" name="backup" class="form-select" onchange="this.form.submit()">
+      {% for backup in backups %}
+        <option value="{{ backup }}" {% if backup == selected_backup %}selected{% endif %}>{{ backup }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  {% if browser_files %}
+    <ul class="nav nav-tabs" id="browserTab" role="tablist">
+      {% for browser in browser_files.keys() %}
+        <li class="nav-item" role="presentation">
+          <button class="nav-link {% if loop.first %}active{% endif %}" id="{{ browser }}-tab" data-bs-toggle="tab" data-bs-target="#{{ browser }}" type="button" role="tab">{{ browser|capitalize }}</button>
+        </li>
+      {% endfor %}
+    </ul>
+    <div class="tab-content mt-3">
+      {% for browser, data in browser_files.items() %}
+        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ browser }}" role="tabpanel">
+          {% if data %}
+            <table class="table table-bordered table-sm">
+              <thead><tr><th>URL</th><th>Username</th><th>Password</th></tr></thead>
+              <tbody>
+                {% for entry in data %}
+                  <tr>
+                    <td>{{ entry.url }}</td>
+                    <td>{{ entry.username }}</td>
+                    <td>{{ entry.password }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="alert alert-warning">No credentials found for {{ browser }} in this backup.</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info">No backups found.</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,13 +1,14 @@
 [
   {
-    "id": "d9b1815930554e179976f37982b24392",
-    "name": "virus",
-    "type": "standard",
+    "id": "c4349dc9f59544f3a7746fa83e02328b",
+    "name": "dsw",
+    "type": "browser backup",
     "available_from": null,
     "expiry_date": null,
-    "server_url": "https://google.com",
+    "server_url": "http://127.0.0.1:5000/api/timestamp",
+    "file_id": "7dc2faa1df03",
     "revoked": false,
-    "created_at": "2025-10-30T05:16:56.075683",
-    "file_name": "d9b1815930554e179976f37982b24392.exe"
+    "created_at": "2025-11-10T06:38:04.110115",
+    "file_name": "c4349dc9f59544f3a7746fa83e02328b.exe"
   }
 ]

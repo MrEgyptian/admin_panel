@@ -30,6 +30,12 @@
                         <div class="form-text">Rotating this value signs out all users by invalidating existing sessions.</div>
                     </div>
 
+                    <div class="col-12 col-lg-6">
+                        <label for="api_host" class="form-label">API host</label>
+                        <input id="api_host" name="api_host" class="form-control" placeholder="https://example.com" value="{{ current.api_host or '' }}">
+                        <div class="form-text">Optional. Overrides the host used in system-generated API URLs.<br>Resolved timestamp endpoint: <code>{{ current.api_timestamp_endpoint }}</code></div>
+                    </div>
+
                     <div class="col-12 col-lg-3">
                         <div class="form-check mt-4 pt-2">
                             <input class="form-check-input" type="checkbox" id="session_cookie_http_only" name="session_cookie_http_only"{% if current.session_cookie_http_only %} checked{% endif %}>

@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from flask import (
@@ -43,7 +44,7 @@ def _config_parser() -> configparser.ConfigParser:
     parser = configparser.ConfigParser()
     config_file: Path = current_app.config["CONFIG_FILE"]
     parser.read(config_file, encoding="utf-8")
-    for section in ("flask", "admin", "executables"):
+    for section in ("flask", "admin", "executables", "api"):
         if not parser.has_section(section):
             parser.add_section(section)
     return parser
@@ -161,6 +162,7 @@ def settings_index():
         same_site = request.form.get("session_cookie_samesite", "Lax").strip()
         http_only = request.form.get("session_cookie_http_only") == "on"
         downloads_public = request.form.get("executables_public_downloads") == "on"
+        api_host_raw = (request.form.get("api_host", "") or "").strip()
         type_indexes = request.form.getlist("type_index[]")
 
         if not secret_key:
@@ -238,11 +240,20 @@ def settings_index():
 
         exe_types = [item["name"] for item in type_definitions]
 
+        api_host_clean = ""
+        if api_host_raw:
+            parsed_host = urlparse(api_host_raw)
+            if parsed_host.scheme not in {"http", "https"} or not parsed_host.netloc:
+                flash("API host must be a valid http(s) URL (e.g. https://example.com).", "error")
+                return _redirect_app_tab()
+            api_host_clean = api_host_raw.rstrip("/")
+
         parser.set("flask", "secret_key", secret_key)
         parser.set("flask", "session_cookie_http_only", "true" if http_only else "false")
         parser.set("flask", "session_cookie_samesite", same_site)
         parser.set("executables", "types", ",".join(exe_types))
         parser.set("executables", "public_downloads", "true" if downloads_public else "false")
+        parser.set("api", "host", api_host_clean)
 
         _write_config(parser)
         _persist_type_definitions(type_definitions)
@@ -252,6 +263,7 @@ def settings_index():
             SESSION_COOKIE_HTTPONLY=http_only,
             SESSION_COOKIE_SAMESITE=same_site,
             EXECUTABLE_DOWNLOADS_PUBLIC=downloads_public,
+            API_BASE_URL=api_host_clean,
         )
 
         flash("Settings saved successfully.", "success")
@@ -266,7 +278,14 @@ def settings_index():
         "type_definitions": existing_definitions,
         "available_templates": _available_templates(),
         "executables_public_downloads": current_app.config.get("EXECUTABLE_DOWNLOADS_PUBLIC", False),
+        "api_host": current_app.config.get("API_BASE_URL", ""),
     }
+
+    api_path = url_for("api.timestamp_window", _external=False)
+    if current_values["api_host"]:
+        current_values["api_timestamp_endpoint"] = f"{current_values['api_host'].rstrip('/')}{api_path}"
+    else:
+        current_values["api_timestamp_endpoint"] = url_for("api.timestamp_window", _external=True)
 
     can_manage_admins = "manage_admins" in (session.get("permissions") or [])
     can_view_logs = "view_logs" in (session.get("permissions") or [])

@@ -1,22 +1,34 @@
-
+from datetime import date, datetime
 from typing import Optional
 
-from datetime import datetime, date
-def parse_form_date(value: str) -> Optional[str]:
-	if not value:
-		return None
-	try:
-		parsed_date = datetime.strptime(value, "%Y-%m-%d").date()
-	except ValueError:
-		return None
-	return parsed_date.isoformat()
+
+_ISO_DATETIME_FORMATS = (
+	"%Y-%m-%dT%H:%M:%S",
+	"%Y-%m-%dT%H:%M",
+	"%Y-%m-%d",
+)
 
 
-def parse_iso_date(value: Optional[str]) -> Optional[date]:
+def parse_iso_datetime(value: Optional[str]) -> Optional[datetime]:
 	if not value:
 		return None
-	try:
-		return datetime.strptime(value, "%Y-%m-%d").date()
-	except ValueError:
+	sanitized = value.strip()
+	if not sanitized:
 		return None
+	if sanitized.endswith("Z"):
+		sanitized = sanitized[:-1]
+	for pattern in _ISO_DATETIME_FORMATS:
+		try:
+			return datetime.strptime(sanitized, pattern)
+		except ValueError:
+			continue
+	return None
+
+
+def format_timestamp(value: datetime) -> str:
+	return value.replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%S")
+
+
+def humanize_timestamp(value: datetime) -> str:
+	return value.strftime("%Y-%m-%d %H:%M")
 

@@ -5,34 +5,133 @@
     <div class="card-body">
         <h2 class="mb-2">Generate New Executable</h2>
         <p class="muted mb-4">Define release windows, expiry policies, and distribution endpoint metadata.</p>
-        <form method="post" class="row g-3">
+    <form method="post" class="row g-3" data-build-form>
             <div class="col-12">
                 <label for="name" class="form-label">Executable name</label>
-                <input id="name" name="name" class="form-control" required maxlength="120">
+                <input id="name" name="name" class="form-control" required maxlength="120" value="{{ form_data.get('name', '') }}">
             </div>
 
             <div class="col-md-6">
                 <label for="exe_type" class="form-label">Executable type</label>
                 <select id="exe_type" name="exe_type" class="form-select" required>
                     {% for option in exe_types %}
-                        <option value="{{ option }}">{{ option.title() }}</option>
+                        <option value="{{ option }}"{% if form_data.get('exe_type', '') == option %} selected{% endif %}>{{ option.title() }}</option>
                     {% endfor %}
                 </select>
             </div>
 
             <div class="col-md-6">
-                <label for="server_url" class="form-label">Server URL (optional)</label>
-                <input id="server_url" name="server_url" class="form-control" placeholder="https://example.com/api" maxlength="255">
+                <label for="file_id" class="form-label">File identifier</label>
+                <input id="file_id" name="file_id" class="form-control" maxlength="64" placeholder="hide-mouse-cursor" value="{{ form_data.get('file_id', '') }}" data-file-id-input>
+                <div class="form-text">Used to name the generated script (<code>file_id.py</code>). Lowercase letters, numbers, dashes, and underscores only.</div>
             </div>
 
             <div class="col-md-6">
-                <label for="available_from" class="form-label">Available from (YYYY-MM-DD)</label>
-                <input id="available_from" name="available_from" class="form-control" placeholder="2025-01-01" pattern="\d{4}-\d{2}-\d{2}">
+                <label for="server_url" class="form-label" data-server-label>Server URL <span class="text-danger" data-required-indicator style="display: none;">*</span></label>
+                <input id="server_url" name="server_url" class="form-control" placeholder="https://example.com/api" maxlength="255" value="{{ form_data.get('server_url', '') }}" data-default-endpoint="{{ timestamp_api_url }}">
+                <div class="form-text" data-server-hint data-optional-text="Optional; used when templates interact with a remote API. Built-in endpoint: &lt;code&gt;{{ timestamp_api_url|e }}&lt;/code&gt;" data-required-text="Required for this template. Provide the remote API endpoint.">Optional; used when templates interact with a remote API. Built-in endpoint: <code>{{ timestamp_api_url }}</code></div>
             </div>
 
-            <div class="col-md-6">
-                <label for="expiry_date" class="form-label">Expiry date (YYYY-MM-DD)</label>
-                <input id="expiry_date" name="expiry_date" class="form-control" placeholder="2025-12-31" pattern="\d{4}-\d{2}-\d{2}">
+            <div class="col-12">
+                <label class="form-label">Available from</label>
+                {% set af_mode = form_data.get('available_from_mode', 'none') %}
+                <div class="border rounded p-3" data-timestamp-field="available_from">
+                    <div class="d-flex flex-wrap gap-3 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="available_from_mode" id="available_from_mode_none" value="none"{% if af_mode == 'none' %} checked{% endif %}>
+                            <label class="form-check-label" for="available_from_mode_none">Immediately</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="available_from_mode" id="available_from_mode_relative" value="relative"{% if af_mode == 'relative' %} checked{% endif %}>
+                            <label class="form-check-label" for="available_from_mode_relative">After interval</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="available_from_mode" id="available_from_mode_time" value="time"{% if af_mode == 'time' %} checked{% endif %}>
+                            <label class="form-check-label" for="available_from_mode_time">Time today</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="available_from_mode" id="available_from_mode_datetime" value="datetime"{% if af_mode == 'datetime' %} checked{% endif %}>
+                            <label class="form-check-label" for="available_from_mode_datetime">Specific date &amp; time</label>
+                        </div>
+                    </div>
+                    <div class="row g-2 timestamp-panel{% if af_mode != 'relative' %} d-none{% endif %}" data-timestamp-panel="relative">
+                        <div class="col-sm-6">
+                            <input type="number" class="form-control" name="available_from_relative_value" min="1" placeholder="5" value="{{ form_data.get('available_from_relative_value', '') }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <select class="form-select" name="available_from_relative_unit">
+                                {% set unit = form_data.get('available_from_relative_unit', 'days') %}
+                                <option value="minutes"{% if unit == 'minutes' %} selected{% endif %}>Minutes</option>
+                                <option value="hours"{% if unit == 'hours' %} selected{% endif %}>Hours</option>
+                                <option value="days"{% if unit == 'days' %} selected{% endif %}>Days</option>
+                                <option value="months"{% if unit == 'months' %} selected{% endif %}>Months</option>
+                                <option value="years"{% if unit == 'years' %} selected{% endif %}>Years</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-text">Schedule the start after the selected interval from now (UTC).</div>
+                        </div>
+                    </div>
+                    <div class="timestamp-panel{% if af_mode != 'time' %} d-none{% endif %}" data-timestamp-panel="time">
+                        <input type="time" class="form-control" name="available_from_time" value="{{ form_data.get('available_from_time', '') }}">
+                        <div class="form-text">Uses today&rsquo;s date in UTC with the selected time.</div>
+                    </div>
+                    <div class="timestamp-panel{% if af_mode != 'datetime' %} d-none{% endif %}" data-timestamp-panel="datetime">
+                        <input type="datetime-local" class="form-control" name="available_from_datetime" value="{{ form_data.get('available_from_datetime', '') }}">
+                        <div class="form-text">Provide the exact availability timestamp (UTC).</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Expiry date</label>
+                {% set exp_mode = form_data.get('expiry_date_mode', 'none') %}
+                <div class="border rounded p-3" data-timestamp-field="expiry_date">
+                    <div class="d-flex flex-wrap gap-3 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="expiry_date_mode" id="expiry_date_mode_none" value="none"{% if exp_mode == 'none' %} checked{% endif %}>
+                            <label class="form-check-label" for="expiry_date_mode_none">No expiry</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="expiry_date_mode" id="expiry_date_mode_relative" value="relative"{% if exp_mode == 'relative' %} checked{% endif %}>
+                            <label class="form-check-label" for="expiry_date_mode_relative">After interval</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="expiry_date_mode" id="expiry_date_mode_time" value="time"{% if exp_mode == 'time' %} checked{% endif %}>
+                            <label class="form-check-label" for="expiry_date_mode_time">Time today</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="expiry_date_mode" id="expiry_date_mode_datetime" value="datetime"{% if exp_mode == 'datetime' %} checked{% endif %}>
+                            <label class="form-check-label" for="expiry_date_mode_datetime">Specific date &amp; time</label>
+                        </div>
+                    </div>
+                    <div class="row g-2 timestamp-panel{% if exp_mode != 'relative' %} d-none{% endif %}" data-timestamp-panel="relative">
+                        <div class="col-sm-6">
+                            <input type="number" class="form-control" name="expiry_date_relative_value" min="1" placeholder="30" value="{{ form_data.get('expiry_date_relative_value', '') }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <select class="form-select" name="expiry_date_relative_unit">
+                                {% set exp_unit = form_data.get('expiry_date_relative_unit', 'days') %}
+                                <option value="minutes"{% if exp_unit == 'minutes' %} selected{% endif %}>Minutes</option>
+                                <option value="hours"{% if exp_unit == 'hours' %} selected{% endif %}>Hours</option>
+                                <option value="days"{% if exp_unit == 'days' %} selected{% endif %}>Days</option>
+                                <option value="months"{% if exp_unit == 'months' %} selected{% endif %}>Months</option>
+                                <option value="years"{% if exp_unit == 'years' %} selected{% endif %}>Years</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-text">End availability after the specified interval from now (UTC).</div>
+                        </div>
+                    </div>
+                    <div class="timestamp-panel{% if exp_mode != 'time' %} d-none{% endif %}" data-timestamp-panel="time">
+                        <input type="time" class="form-control" name="expiry_date_time" value="{{ form_data.get('expiry_date_time', '') }}">
+                        <div class="form-text">Uses today&rsquo;s UTC date with the selected time.</div>
+                    </div>
+                    <div class="timestamp-panel{% if exp_mode != 'datetime' %} d-none{% endif %}" data-timestamp-panel="datetime">
+                        <input type="datetime-local" class="form-control" name="expiry_date_datetime" value="{{ form_data.get('expiry_date_datetime', '') }}">
+                        <div class="form-text">Provide the exact expiry timestamp (UTC).</div>
+                    </div>
+                </div>
             </div>
 
             <div class="col-12 d-flex flex-column flex-md-row gap-3 mt-2">
@@ -42,4 +141,119 @@
         </form>
     </div>
 </div>
+
+<div class="modal fade" id="build-progress-modal" tabindex="-1" aria-hidden="true" data-build-modal>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center p-4">
+            <div class="modal-body">
+                <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+                <h5 class="mb-2">Building executable</h5>
+                <p class="muted mb-0">This can take up to a minute. Please keep this tab open.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function () {
+    const form = document.querySelector('[data-build-form]');
+    const modalEl = document.querySelector('[data-build-modal]');
+    const typeSelect = document.getElementById('exe_type');
+    const serverInput = document.getElementById('server_url');
+    const requiredIndicator = document.querySelector('[data-required-indicator]');
+    const serverHint = document.querySelector('[data-server-hint]');
+    const optionalHint = serverHint ? serverHint.dataset.optionalText || serverHint.innerHTML : '';
+    const requiredHint = serverHint ? serverHint.dataset.requiredText || 'Required for this template. Provide the remote API endpoint.' : '';
+    const defaultEndpoint = serverInput ? serverInput.getAttribute('data-default-endpoint') || '' : '';
+    const typeRequirements = {{ type_requirements|default({})|tojson }};
+
+    if (form && modalEl && typeof bootstrap !== 'undefined') {
+        const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        const buttons = Array.from(form.querySelectorAll('button[type="submit"]'));
+        form.addEventListener('submit', function () {
+            buttons.forEach(function (button) {
+                button.disabled = true;
+            });
+            modal.show();
+        });
+    }
+
+    function syncRequirement() {
+        if (!typeSelect || !serverInput) {
+            return;
+        }
+        const requires = Boolean(typeRequirements[typeSelect.value]);
+        serverInput.required = requires;
+        if (requiredIndicator) {
+            requiredIndicator.style.display = requires ? 'inline' : 'none';
+        }
+        if (serverHint) {
+            serverHint.innerHTML = requires ? requiredHint : optionalHint;
+        }
+        if (requires) {
+            if (!serverInput.value.trim() && defaultEndpoint) {
+                serverInput.value = defaultEndpoint;
+            }
+            serverInput.setAttribute('aria-required', 'true');
+        } else {
+            serverInput.removeAttribute('aria-required');
+        }
+    }
+
+    if (typeSelect) {
+        typeSelect.addEventListener('change', syncRequirement);
+        syncRequirement();
+    }
+
+    const timestampContainers = document.querySelectorAll('[data-timestamp-field]');
+    timestampContainers.forEach(function (container) {
+        const fieldName = container.getAttribute('data-timestamp-field');
+        if (!fieldName) {
+            return;
+        }
+        const panels = Array.from(container.querySelectorAll('[data-timestamp-panel]'));
+        const radios = Array.from(container.querySelectorAll('input[name="' + fieldName + '_mode"]'));
+
+        const refresh = function () {
+            const active = (radios.find((radio) => radio.checked) || {}).value || 'none';
+            panels.forEach(function (panel) {
+                const panelKey = panel.getAttribute('data-timestamp-panel');
+                const shouldShow = panelKey && panelKey === active;
+                panel.classList.toggle('d-none', !shouldShow);
+            });
+        };
+
+        radios.forEach(function (radio) {
+            radio.addEventListener('change', refresh);
+        });
+        refresh();
+    });
+
+    const nameInput = document.getElementById('name');
+    const fileIdInput = document.getElementById('file_id');
+    if (nameInput && fileIdInput) {
+        const normalize = function (value) {
+            return value
+                .toLowerCase()
+                .replace(/[^a-z0-9_-]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 64);
+        };
+
+        let autoFillEnabled = !fileIdInput.value.trim();
+        nameInput.addEventListener('input', function () {
+            if (!autoFillEnabled) {
+                return;
+            }
+            fileIdInput.value = normalize(nameInput.value) || '';
+        });
+        fileIdInput.addEventListener('input', function () {
+            autoFillEnabled = fileIdInput.value.trim().length === 0;
+        });
+    }
+})();
+</script>
 {% endblock %}

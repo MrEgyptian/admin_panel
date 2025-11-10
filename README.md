@@ -6,6 +6,7 @@ A Flask-based administrative control panel for managing executable builds, admin
 
 - Role-aware dashboards with per-permission controls for viewing and managing executables.
 - Executable lifecycle management: create, update metadata, download, and delete artefacts stored on disk.
+- Template-driven executable builds compiled with PyInstaller from curated Python templates.
 - Centralised activity logging across users, executables, and recent events with tabbed filters and clear actions.
 - Administrator management with modal-driven add/update flows and configurable permissions.
 - Application settings surface with live persistence to `config.ini`, including session options and executable download visibility.

@@ -40,6 +40,11 @@
                         </a>
                     </li>
                     {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link{% if request.endpoint == 'browser_backup.browser_backups' %} active{% endif %}" href="{{ url_for('browser_backup.browser_backups') }}">
+                            <i class="fa-solid fa-key me-1"></i>Browser Backups
+                        </a>
+                    </li>
                     {% if 'view_logs' in perms %}
                     <li class="nav-item">
                         <a class="nav-link{% if request.endpoint and request.endpoint.startswith('logs.') %} active{% endif %}" href="{{ url_for('logs.logs_index') }}">

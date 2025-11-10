@@ -48,8 +48,8 @@
 								<div class="muted">{{ exe.days_remaining }} days remaining</div>
 							{% endif %}
 						</td>
-						<td>{{ exe.available_from or 'Immediate' }}</td>
-						<td>{{ exe.expiry_date or 'No expiry' }}</td>
+						<td>{{ exe.available_from_display or 'Immediate' }}</td>
+						<td>{{ exe.expiry_date_display or 'No expiry' }}</td>
 						<td>{{ exe.server_url or 'Not set' }}</td>
 						<td class="text-end actions">
 							<a class="btn btn-outline-primary btn-sm" href="{{ url_for('dashboard.download_executable', exe_id=exe.id) }}">
